@@ -26,24 +26,32 @@
         <input type="file" id="gpxUpload" accept=".gpx">
         <label for="gpxUpload" class="upload-btn">Upload GPX Route</label>
       </div>
+      <!-- Button to center the route -->
+      <button id="centerRouteBtn" class="action-btn">Center Route</button>
     </div>
     <div id="loading" class="loading">Processing...</div>
     <div id="map"></div>
     <div class="weather-container">
       <h2>Weather Along Your Route</h2>
+      <!-- Taller timeline box -->
       <div id="weatherTimeline" class="timeline"></div>
       <div id="errorContainer"></div>
     </div>
-    <!-- New Chart Section -->
-    <div class="chart-container">
+    <div class="charts-container">
+      <h2>Temperature vs Distance</h2>
       <canvas id="tempChart"></canvas>
-      <button id="saveChartBtn">Save Chart as Image</button>
-      <div id="chartDetail"></div>
+      <h2>Precipitation vs Time</h2>
+      <canvas id="precipChart"></canvas>
+      <h2>Route Silhouette with Wind Direction</h2>
+      <canvas id="routeCanvas"></canvas>
+      <!-- Button to save all graphics as one image -->
+      <button id="saveGraphicsBtn" class="action-btn">Save All Graphics</button>
     </div>
   </div>
-  <!-- Include Chart.js from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Include external libraries for charts and image capture -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

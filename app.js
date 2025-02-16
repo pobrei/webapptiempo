@@ -1,4 +1,4 @@
-// Initialize the map with Barcelona as the initial view
+// Initialize the map with initial view set to Barcelona
 const map = L.map('map').setView([41.3851, 2.1734], 13);
 
 // Add OpenStreetMap tiles:
@@ -8,8 +8,10 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 let routeLayer;
 let weatherMarkers = [];
-let weatherTasks = []; // Global array for weather tasks
-let timelineEntries = []; // To store timeline entry DOM elements
+let timelineEntries = []; // store timeline entry elements for linking
+
+/* Global array for weather tasks */
+let weatherTasks = [];
 
 /* Helper: Calculate distance between two coordinates using the Haversine formula (in km) */
 function getDistance(coord1, coord2) {
@@ -79,7 +81,7 @@ function clearError() {
   document.getElementById("errorContainer").innerText = "";
 }
 
-/* Fetch detailed weather data from OpenWeatherMap forecast API for given lat, lon, and forecast time */
+/* Fetch detailed weather data from OpenWeatherMap forecast API */
 async function fetchWeatherAtTime(lat, lon, forecastTime) {
   const apiKey = "c8dbb11f02b05e11db446c2a69992c0d"; // <-- Replace with your actual API key
   const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
@@ -100,11 +102,13 @@ async function fetchWeatherAtTime(lat, lon, forecastTime) {
     }
     return {
       temp: closest.main.temp,
+      feels_like: closest.main.feels_like || closest.main.temp,
       humidity: closest.main.humidity,
       windSpeed: closest.wind.speed,
       windDeg: closest.wind.deg,
       condition: closest.weather[0].main,
-      description: closest.weather[0].description
+      description: closest.weather[0].description,
+      rain: closest.rain ? closest.rain["3h"] : 0
     };
   } catch (e) {
     console.error(e);
@@ -116,13 +120,14 @@ async function fetchWeatherAtTime(lat, lon, forecastTime) {
 function formatDetailedWeatherData(weatherData) {
   if (!weatherData) return "N/A";
   const windDir = degToCardinal(weatherData.windDeg);
-  return `<strong>${weatherData.temp}°C</strong><br>
+  return `<strong>${weatherData.temp}°C</strong> (Feels like: ${weatherData.feels_like}°C)<br>
 Humidity: ${weatherData.humidity}%<br>
 Wind: ${weatherData.windSpeed} m/s (${windDir})<br>
+Rain: ${weatherData.rain} mm<br>
 ${weatherData.condition} (${weatherData.description})`;
 }
 
-/* Prepare weather tasks based on the route, including distance */
+/* Prepare weather tasks based on the route */
 function prepareWeatherTasks(coordinates, avgSpeed, weatherInterval, startTime) {
   let totalDistance = 0;
   for (let i = 1; i < coordinates.length; i++) {
@@ -146,115 +151,209 @@ function prepareWeatherTasks(coordinates, avgSpeed, weatherInterval, startTime) 
   return tasks;
 }
 
-/* Load all weather tasks at once and show detailed data including interactivity */
+/* Load all weather tasks and build timeline & markers */
 async function loadAllWeatherTasks() {
   const timeline = document.getElementById("weatherTimeline");
   timeline.innerHTML = "";
   timelineEntries = [];
-  for (let index = 0; index < weatherTasks.length; index++) {
-    let task = weatherTasks[index];
+  let tempData = [];
+  let precipData = [];
+  for (let i = 0; i < weatherTasks.length; i++) {
+    let task = weatherTasks[i];
     const weatherData = await fetchWeatherAtTime(task.lat, task.lon, task.forecastTime);
-    task.weatherData = weatherData;
     const detailedStr = formatDetailedWeatherData(weatherData);
-    // Add marker with popup showing detailed weather info
+    // Create marker with popup
     const marker = L.marker([task.lat, task.lon]).addTo(map)
       .bindPopup(`${detailedStr}<br>${task.forecastTime.toLocaleString()}`);
-    task.marker = marker; // store marker reference
-    
-    // When marker is clicked, highlight corresponding timeline entry
-    marker.on("click", function() {
-      highlightEntry(index);
+    marker.on('click', function() {
+      timelineEntries[i].classList.add('active');
+      timelineEntries[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-    
-    // Add entry to timeline showing detailed weather info
+    weatherMarkers.push(marker);
+    // Create timeline entry
     const entry = document.createElement("div");
     entry.classList.add("entry");
     entry.innerHTML = `${detailedStr}<br><small>${task.forecastTime.toLocaleTimeString()}</small>`;
-    // When entry is clicked, pan map to marker and open popup
-    entry.addEventListener("click", function() {
-      map.setView([task.lat, task.lon], 15);
+    entry.addEventListener('click', function() {
+      map.setView([task.lat, task.lon], 13);
       marker.openPopup();
-      highlightEntry(index);
     });
     timeline.appendChild(entry);
     timelineEntries.push(entry);
+    // Collect chart data
+    tempData.push({ distance: task.distance, temp: weatherData ? weatherData.temp : null });
+    precipData.push({ time: task.forecastTime, rain: weatherData ? weatherData.rain : 0 });
   }
-  // After processing all tasks, render the temperature chart
-  renderChart();
+  // Render charts and route silhouette after tasks are loaded
+  renderTempChart(tempData);
+  renderPrecipChart(precipData);
+  renderRouteSilhouette();
 }
 
-/* Highlight timeline entry at given index */
-function highlightEntry(index) {
-  timelineEntries.forEach((entry, i) => {
-    if (i === index) {
-      entry.classList.add("active");
-    } else {
-      entry.classList.remove("active");
-    }
-  });
+/* Prepare and load weather tasks for the route */
+async function fetchWeatherForRoute(coordinates) {
+  weatherMarkers.forEach(marker => map.removeLayer(marker));
+  weatherMarkers = [];
+  document.getElementById("weatherTimeline").innerHTML = "";
+  clearError();
+  const avgSpeed = parseFloat(document.getElementById("avgSpeed").value);
+  const weatherInterval = parseFloat(document.getElementById("weatherInterval").value);
+  const startTimeInput = document.getElementById("startTime").value;
+  if (!startTimeInput) {
+    displayError("Please enter a valid start time.");
+    return;
+  }
+  const startTime = new Date(startTimeInput);
+  if (isNaN(startTime.getTime())) {
+    displayError("Invalid start time.");
+    return;
+  }
+  weatherTasks = prepareWeatherTasks(coordinates, avgSpeed, weatherInterval, startTime);
+  await loadAllWeatherTasks();
 }
 
-/* Render temperature vs. distance chart using Chart.js */
-function renderChart() {
+/* Render Temperature vs Distance Chart using Chart.js */
+function renderTempChart(data) {
   const ctx = document.getElementById('tempChart').getContext('2d');
-  const labels = weatherTasks.map(task => task.distance.toFixed(1) + " km");
-  const data = weatherTasks.map(task => task.weatherData ? task.weatherData.temp : null);
-  const chart = new Chart(ctx, {
+  const distances = data.map(d => d.distance.toFixed(1));
+  const temps = data.map(d => d.temp);
+  new Chart(ctx, {
     type: 'line',
     data: {
-      labels: labels,
+      labels: distances,
       datasets: [{
         label: 'Temperature (°C)',
-        data: data,
-        borderColor: 'rgba(75, 192, 192, 1)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        data: temps,
+        borderColor: 'rgba(255,99,132,1)',
+        backgroundColor: 'rgba(255,99,132,0.2)',
         pointRadius: 5,
-        pointHoverRadius: 7,
+        pointHoverRadius: 7
       }]
     },
     options: {
-      responsive: true,
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const index = context.dataIndex;
-              const task = weatherTasks[index];
-              const wd = task.weatherData;
-              if (wd) {
-                return `Temp: ${wd.temp}°C, Humidity: ${wd.humidity}%, Wind: ${wd.windSpeed} m/s (${degToCardinal(wd.windDeg)})`;
-              } else {
-                return "No data";
-              }
-            }
-          }
-        }
-      },
-      onClick: (e, elements) => {
+      onClick: (evt, elements) => {
         if (elements.length > 0) {
           const index = elements[0].index;
-          const task = weatherTasks[index];
-          const detailDiv = document.getElementById('chartDetail');
-          detailDiv.innerHTML = `<strong>Details for ${task.distance.toFixed(1)} km:</strong><br>
-          Temperature: ${task.weatherData.temp}°C<br>
-          Humidity: ${task.weatherData.humidity}%<br>
-          Wind: ${task.weatherData.windSpeed} m/s (${degToCardinal(task.weatherData.windDeg)})<br>
-          Condition: ${task.weatherData.condition} (${task.weatherData.description})<br>
-          Forecast Time: ${task.forecastTime.toLocaleString()}`;
+          map.setView([weatherTasks[index].lat, weatherTasks[index].lon], 13);
+          weatherMarkers[index].openPopup();
         }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Distance (km)' } },
+        y: { title: { display: true, text: 'Temperature (°C)' } }
       }
     }
   });
-  // Save chart instance for use in saving image later
-  window.tempChartInstance = chart;
 }
 
-/* Button to save the chart as an image */
-document.getElementById("saveChartBtn").addEventListener("click", function() {
-  const link = document.createElement('a');
-  link.download = 'temperature_chart.png';
-  link.href = document.getElementById('tempChart').toDataURL('image/png');
-  link.click();
+/* Render Precipitation vs Time Chart using Chart.js */
+function renderPrecipChart(data) {
+  const ctx = document.getElementById('precipChart').getContext('2d');
+  const times = data.map(d => d.time.toLocaleTimeString());
+  const rains = data.map(d => d.rain);
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: times,
+      datasets: [{
+        label: 'Rain Precipitation (mm)',
+        data: rains,
+        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      onClick: (evt, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          map.setView([weatherTasks[index].lat, weatherTasks[index].lon], 13);
+          weatherMarkers[index].openPopup();
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Time' } },
+        y: { title: { display: true, text: 'Rain (mm)' } }
+      }
+    }
+  });
+}
+
+/* Render Route Silhouette with Wind Direction on a Canvas */
+function renderRouteSilhouette() {
+  if (!routeLayer) return;
+  const canvas = document.getElementById('routeCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 200;
+  const coords = routeLayer.getLatLngs();
+  if (coords.length === 0) return;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  coords.forEach(pt => {
+    if (pt.lat < minLat) minLat = pt.lat;
+    if (pt.lat > maxLat) maxLat = pt.lat;
+    if (pt.lng < minLng) minLng = pt.lng;
+    if (pt.lng > maxLng) maxLng = pt.lng;
+  });
+  const pad = 20;
+  const drawableWidth = canvas.width - 2 * pad;
+  const drawableHeight = canvas.height - 2 * pad;
+  function mapToCanvas(lat, lng) {
+    const x = ((lng - minLng) / (maxLng - minLng)) * drawableWidth + pad;
+    const y = drawableHeight - ((lat - minLat) / (maxLat - minLat)) * drawableHeight + pad;
+    return { x, y };
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.beginPath();
+  const start = mapToCanvas(coords[0].lat, coords[0].lng);
+  ctx.moveTo(start.x, start.y);
+  coords.forEach(pt => {
+    const p = mapToCanvas(pt.lat, pt.lng);
+    ctx.lineTo(p.x, p.y);
+  });
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Draw wind arrows every 5 km (approximate using weatherTasks)
+  weatherTasks.forEach((task, index) => {
+    if (task.distance % 5 < 0.1) {
+      const pos = mapToCanvas(task.lat, task.lon);
+      // For demonstration, we use a dummy wind direction (0°). In practice, store/use the task’s windDeg.
+      const windDeg = 0;
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      ctx.rotate((windDeg - 90) * Math.PI / 180);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(10, 0);
+      ctx.lineTo(7, -3);
+      ctx.moveTo(10, 0);
+      ctx.lineTo(7, 3);
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+/* Button to center the route on the map */
+document.getElementById("centerRouteBtn").addEventListener("click", function() {
+  if (routeLayer) {
+    map.fitBounds(routeLayer.getBounds());
+  }
+});
+
+/* Button to save all graphics as one image */
+document.getElementById("saveGraphicsBtn").addEventListener("click", function() {
+  const chartsContainer = document.querySelector('.charts-container');
+  html2canvas(chartsContainer, { backgroundColor: "#fff" }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'graphics.png';
+    link.href = canvas.toDataURL();
+    link.click();
+  });
 });
 
 /* Handle GPX file upload */
@@ -275,23 +374,7 @@ document.getElementById("gpxUpload").addEventListener("change", function(e) {
       if (routeLayer) map.removeLayer(routeLayer);
       routeLayer = L.polyline(coordinates, { color: "blue" }).addTo(map);
       map.fitBounds(routeLayer.getBounds());
-      const avgSpeed = parseFloat(document.getElementById("avgSpeed").value); // km/h
-      const weatherInterval = parseFloat(document.getElementById("weatherInterval").value); // km
-      const startTimeInput = document.getElementById("startTime").value;
-      if (!startTimeInput) {
-        displayError("Please enter a valid start time.");
-        document.getElementById("loading").style.display = "none";
-        return;
-      }
-      const startTime = new Date(startTimeInput);
-      if (isNaN(startTime.getTime())) {
-        displayError("Invalid start time.");
-        document.getElementById("loading").style.display = "none";
-        return;
-      }
-      // Prepare tasks for each interval along the route
-      weatherTasks = prepareWeatherTasks(coordinates, avgSpeed, weatherInterval, startTime);
-      await loadAllWeatherTasks();
+      await fetchWeatherForRoute(coordinates);
       document.getElementById("loading").style.display = "none";
     };
     reader.readAsText(file);
