@@ -5,6 +5,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Include Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Include html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -26,32 +30,23 @@
         <input type="file" id="gpxUpload" accept=".gpx">
         <label for="gpxUpload" class="upload-btn">Upload GPX Route</label>
       </div>
-      <!-- Button to center the route -->
-      <button id="centerRouteBtn" class="action-btn">Center Route</button>
     </div>
     <div id="loading" class="loading">Processing...</div>
     <div id="map"></div>
+    <button id="centerRouteBtn">Center Route</button>
+    <div class="charts-container">
+      <canvas id="tempChart"></canvas>
+      <canvas id="precipChart"></canvas>
+      <canvas id="routeCanvas"></canvas>
+    </div>
+    <button id="saveGraphicsBtn">Save Graphics</button>
     <div class="weather-container">
       <h2>Weather Along Your Route</h2>
-      <!-- Taller timeline box -->
       <div id="weatherTimeline" class="timeline"></div>
       <div id="errorContainer"></div>
     </div>
-    <div class="charts-container">
-      <h2>Temperature vs Distance</h2>
-      <canvas id="tempChart"></canvas>
-      <h2>Precipitation vs Time</h2>
-      <canvas id="precipChart"></canvas>
-      <h2>Route Silhouette with Wind Direction</h2>
-      <canvas id="routeCanvas"></canvas>
-      <!-- Button to save all graphics as one image -->
-      <button id="saveGraphicsBtn" class="action-btn">Save All Graphics</button>
-    </div>
   </div>
-  <!-- Include external libraries for charts and image capture -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

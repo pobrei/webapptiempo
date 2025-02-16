@@ -100,6 +100,14 @@ async function fetchWeatherAtTime(lat, lon, forecastTime) {
         closest = forecast;
       }
     }
+    let rainValue = 0;
+    if (closest.rain) {
+      if (typeof closest.rain === 'object' && closest.rain["3h"] !== undefined) {
+        rainValue = Math.max(Number(closest.rain["3h"]), 0);
+      } else if (typeof closest.rain === 'number') {
+        rainValue = Math.max(closest.rain, 0);
+      }
+    }
     return {
       temp: closest.main.temp,
       feels_like: closest.main.feels_like || closest.main.temp,
@@ -108,7 +116,7 @@ async function fetchWeatherAtTime(lat, lon, forecastTime) {
       windDeg: closest.wind.deg,
       condition: closest.weather[0].main,
       description: closest.weather[0].description,
-      rain: closest.rain ? closest.rain["3h"] : 0
+      rain: rainValue
     };
   } catch (e) {
     console.error(e);
@@ -125,6 +133,11 @@ Humidity: ${weatherData.humidity}%<br>
 Wind: ${weatherData.windSpeed} m/s (${windDir})<br>
 Rain: ${weatherData.rain} mm<br>
 ${weatherData.condition} (${weatherData.description})`;
+}
+
+/* Utility: clear active highlight from all timeline entries */
+function clearActiveTimeline() {
+  timelineEntries.forEach(entry => entry.classList.remove('active'));
 }
 
 /* Prepare weather tasks based on the route */
@@ -161,20 +174,28 @@ async function loadAllWeatherTasks() {
   for (let i = 0; i < weatherTasks.length; i++) {
     let task = weatherTasks[i];
     const weatherData = await fetchWeatherAtTime(task.lat, task.lon, task.forecastTime);
+    // Store windDeg for route silhouette (if available)
+    task.windDeg = weatherData ? weatherData.windDeg : 0;
     const detailedStr = formatDetailedWeatherData(weatherData);
-    // Create marker with popup
+    // Create marker with popup and tooltip
     const marker = L.marker([task.lat, task.lon]).addTo(map)
       .bindPopup(`${detailedStr}<br>${task.forecastTime.toLocaleString()}`);
+    if (weatherData) {
+      marker.bindTooltip(`Feels like: ${weatherData.feels_like}°C, Rain: ${weatherData.rain} mm`);
+    }
     marker.on('click', function() {
+      clearActiveTimeline();
       timelineEntries[i].classList.add('active');
       timelineEntries[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     weatherMarkers.push(marker);
-    // Create timeline entry
+    // Create timeline entry with cross-click behavior
     const entry = document.createElement("div");
     entry.classList.add("entry");
     entry.innerHTML = `${detailedStr}<br><small>${task.forecastTime.toLocaleTimeString()}</small>`;
     entry.addEventListener('click', function() {
+      clearActiveTimeline();
+      entry.classList.add('active');
       map.setView([task.lat, task.lon], 13);
       marker.openPopup();
     });
@@ -234,6 +255,8 @@ function renderTempChart(data) {
       onClick: (evt, elements) => {
         if (elements.length > 0) {
           const index = elements[0].index;
+          clearActiveTimeline();
+          timelineEntries[index].classList.add('active');
           map.setView([weatherTasks[index].lat, weatherTasks[index].lon], 13);
           weatherMarkers[index].openPopup();
         }
@@ -268,6 +291,8 @@ function renderPrecipChart(data) {
       onClick: (evt, elements) => {
         if (elements.length > 0) {
           const index = elements[0].index;
+          clearActiveTimeline();
+          timelineEntries[index].classList.add('active');
           map.setView([weatherTasks[index].lat, weatherTasks[index].lon], 13);
           weatherMarkers[index].openPopup();
         }
@@ -305,6 +330,7 @@ function renderRouteSilhouette() {
     return { x, y };
   }
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Draw route silhouette
   ctx.beginPath();
   const start = mapToCanvas(coords[0].lat, coords[0].lng);
   ctx.moveTo(start.x, start.y);
@@ -315,15 +341,17 @@ function renderRouteSilhouette() {
   ctx.strokeStyle = '#333';
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Draw wind arrows every 5 km (approximate using weatherTasks)
-  weatherTasks.forEach((task, index) => {
-    if (task.distance % 5 < 0.1) {
+  // Draw wind arrows every ~5 km using the task's stored windDeg.
+  // Calculate the arrow angle so that it points in the direction the wind is blowing.
+  // If the API returns wind direction as "from" then adding 180 will get the "to" direction.
+  // Then subtract 90 to adjust for canvas (default arrow drawn to the right).
+  weatherTasks.forEach(task => {
+    if (Math.abs(task.distance % 5) < 0.3) {
       const pos = mapToCanvas(task.lat, task.lon);
-      // For demonstration, we use a dummy wind direction (0°). In practice, store/use the task’s windDeg.
-      const windDeg = 0;
+      const arrowAngle = (task.windDeg + 180 - 90) * Math.PI / 180;
       ctx.save();
       ctx.translate(pos.x, pos.y);
-      ctx.rotate((windDeg - 90) * Math.PI / 180);
+      ctx.rotate(arrowAngle);
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.lineTo(10, 0);
