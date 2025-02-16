@@ -1,46 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bike Weather Planner</title>
-  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
-    <h1 id="mainHeading">Bike Weather Planner</h1>
-    <div class="controls" role="region" aria-label="Input Controls">
+    <h1>Bike Weather Planner</h1>
+    <div class="controls">
       <div class="input-group">
         <label for="startTime">Start Time:</label>
-        <input type="datetime-local" id="startTime" required aria-required="true">
+        <input type="datetime-local" id="startTime" required>
       </div>
       <div class="input-group">
         <label for="avgSpeed">Avg Speed (km/h):</label>
-        <input type="number" id="avgSpeed" min="10" max="40" value="20" required aria-required="true">
+        <input type="number" id="avgSpeed" min="10" max="40" value="20" required>
       </div>
       <div class="input-group">
         <label for="weatherInterval">Weather every (km):</label>
-        <input type="number" id="weatherInterval" min="1" max="100" value="5" required aria-required="true">
+        <input type="number" id="weatherInterval" min="1" max="100" value="5" required>
       </div>
       <div class="file-input">
-        <input type="file" id="gpxUpload" accept=".gpx" aria-label="Upload GPX Route">
+        <input type="file" id="gpxUpload" accept=".gpx">
         <label for="gpxUpload" class="upload-btn">Upload GPX Route</label>
       </div>
       <!-- Button to center the route -->
-      <button id="centerRouteBtn" class="action-btn" aria-label="Center Route on Map">Center Route</button>
+      <button id="centerRouteBtn" class="action-btn">Center Route</button>
     </div>
-    <div id="loading" class="loading" role="alert" aria-live="assertive">Processing...</div>
-    <div id="map" aria-label="Map displaying route and weather markers"></div>
-    <div class="weather-container" role="region" aria-label="Weather information">
+    <div id="loading" class="loading">Processing...</div>
+    <div id="map"></div>
+    <div class="weather-container">
       <h2>Weather Along Your Route</h2>
       <!-- Taller timeline box -->
       <div id="weatherTimeline" class="timeline"></div>
-      <div id="errorContainer" role="alert"></div>
+      <div id="errorContainer"></div>
     </div>
-    <div class="charts-container" role="region" aria-label="Charts">
+    <div class="charts-container">
       <h2>Temperature vs Distance</h2>
       <canvas id="tempChart"></canvas>
       <h2>Precipitation vs Time</h2>
@@ -48,27 +45,13 @@
       <h2>Route Silhouette with Wind Direction</h2>
       <canvas id="routeCanvas"></canvas>
       <!-- Button to save all graphics as one image -->
-      <button id="saveGraphicsBtn" class="action-btn" aria-label="Save Graphics">Save All Graphics</button>
+      <button id="saveGraphicsBtn" class="action-btn">Save All Graphics</button>
     </div>
   </div>
-
-  <!-- Toast notification container -->
-  <div id="toastContainer" aria-live="assertive"></div>
-
   <!-- Include external libraries for charts and image capture -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="app.js"></script>
-  <script>
-    // Register service worker for PWA functionality
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(reg => console.log('Service worker registered.', reg))
-          .catch(err => console.error('Service worker registration failed:', err));
-      });
-    }
-  </script>
 </body>
 </html>
