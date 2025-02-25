@@ -1,52 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Bike Weather Planner</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-  <!-- Include Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Include html2canvas -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Route Weather Analyst</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <!-- App CSS -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Bike Weather Planner</h1>
-    <div class="controls">
-      <div class="input-group">
-        <label for="startTime">Start Time:</label>
-        <input type="datetime-local" id="startTime" required>
-      </div>
-      <div class="input-group">
-        <label for="avgSpeed">Avg Speed (km/h):</label>
-        <input type="number" id="avgSpeed" min="10" max="40" value="20" required>
-      </div>
-      <div class="input-group">
-        <label for="weatherInterval">Weather every (km):</label>
-        <input type="number" id="weatherInterval" min="1" max="100" value="5" required>
-      </div>
-      <div class="file-input">
-        <input type="file" id="gpxUpload" accept=".gpx">
-        <label for="gpxUpload" class="upload-btn">Upload GPX Route</label>
-      </div>
-    </div>
-    <div id="loading" class="loading">Processing...</div>
-    <div id="map"></div>
-    <button id="centerRouteBtn">Center Route</button>
-    <div class="charts-container">
-      <canvas id="tempChart"></canvas>
-      <canvas id="precipChart"></canvas>
-      <canvas id="routeCanvas"></canvas>
-    </div>
-    <button id="saveGraphicsBtn">Save Graphics</button>
-    <div class="weather-container">
-      <h2>Weather Along Your Route</h2>
-      <div id="weatherTimeline" class="timeline"></div>
-      <div id="errorContainer"></div>
-    </div>
+  <!-- Loading Overlay -->
+  <div id="loading" class="loading" aria-live="polite">
+    <div class="spinner" role="status"><i class="fas fa-sun fa-spin"></i></div>
+    <div class="loading-text">Processing Route Data...</div>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Alerts -->
+  <div id="alerts" class="alerts" aria-live="assertive"></div>
+
+  <main class="container">
+    <section class="map-container">
+      <div class="controls card">
+        <div class="input-group">
+          <label for="gpxUpload"><i class="fas fa-route"></i> GPX File</label>
+          <input type="file" id="gpxUpload" accept=".gpx" />
+        </div>
+        <div class="input-row">
+          <div class="input-group">
+            <label for="startTime"><i class="fas fa-clock"></i> Start Time</label>
+            <input type="datetime-local" id="startTime" />
+          </div>
+          <div class="input-group">
+            <label for="weatherInterval"><i class="fas fa-ruler"></i> Interval (km)</label>
+            <input type="number" id="weatherInterval" value="5" min="1" />
+          </div>
+          <div class="input-group">
+            <label for="avgSpeed"><i class="fas fa-tachometer-alt"></i> Speed (km/h)</label>
+            <input type="number" id="avgSpeed" value="20" min="1" />
+          </div>
+        </div>
+        <div class="button-group">
+          <button id="centerRouteBtn" class="btn primary">
+            <i class="fas fa-crosshairs"></i> Center Map
+          </button>
+          <button id="saveGraphicsBtn" class="btn success">
+            <i class="fas fa-download"></i> Save Report
+          </button>
+        </div>
+      </div>
+      <div id="map" class="map"></div>
+    </section>
+
+    <section class="dashboard card">
+      <div class="chart-container">
+        <canvas id="tempChart"></canvas>
+        <canvas id="precipChart"></canvas>
+        <canvas id="windChart"></canvas>
+        <canvas id="humidityChart"></canvas>
+        <canvas id="pressureChart"></canvas>
+        <canvas id="elevationChart"></canvas>
+      </div>
+      <div class="timeline-container card">
+        <h3><i class="fas fa-history"></i> Weather Timeline</h3>
+        <div id="timeline"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- External Libraries -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Configuration and App JS -->
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
