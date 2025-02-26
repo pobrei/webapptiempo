@@ -250,8 +250,7 @@
     weatherMarkers = [];
   };
 
-  // ----------------- Route File Parsing -----------------
-  // GPX Parsing
+  // ----------------- Route File Parsing (GPX Only) -----------------
   const parseGPX = (gpxData) => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(gpxData, "text/xml");
@@ -269,24 +268,14 @@
     });
   };
 
-  // FIT Parsing (simulated)
-  const parseFIT = (arrayBuffer) => {
-    // In production, use a library like fit-file-parser.
-    // Here we simulate parsing by returning dummy route data.
-    return [
-      { lat: 41.3851, lon: 2.1734, ele: 30 },
-      { lat: 41.3900, lon: 2.1800, ele: 35 }
-    ];
-  };
-
-  // Render route on map
+  // ----------------- Render Route on Map -----------------
   const renderRoute = (coords) => {
     if (routeLayer) map.removeLayer(routeLayer);
     routeLayer = L.polyline(coords, { color: "#2196F3" }).addTo(map);
     map.fitBounds(routeLayer.getBounds());
   };
 
-  // Prepare weather tasks based on route coordinates
+  // ----------------- Prepare Weather Tasks -----------------
   const prepareWeatherTasks = async (coords) => {
     const totalDistance = calculateTotalDistance(coords);
     const startTime = new Date(document.getElementById("startTime").value);
@@ -525,7 +514,7 @@
           tension: 0.4,
           fill: false,
           pointStyle: weatherTasks.map(t => {
-            // Adjust wind direction: add 180° so arrow points toward where wind goes.
+            // Adjust wind direction so arrow points where wind goes (add 180°)
             const adjustedWindDeg = ((t.weather.windDeg ?? 0) + 180) % 360;
             const canvas = createRotatedArrow(adjustedWindDeg);
             return canvas.toDataURL();
@@ -578,7 +567,6 @@
       showError("No forecast data available to save.");
       return;
     }
-    // Use jsPDF to generate a nicely formatted PDF.
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(16);
@@ -613,58 +601,6 @@
   // ----------------- Event Listeners for Forecast Button -----------------
   document.getElementById('saveForecast').addEventListener('click', saveForecast);
 
-  // ----------------- Third-Party OAuth and Route Import -----------------
-  const loginWithProvider = (provider) => {
-    const config = OAUTH_CONFIG[provider];
-    if (!config) {
-      showError("OAuth configuration not found for " + provider);
-      return;
-    }
-    const authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(config.redirectUri)}&response_type=token&scope=${encodeURIComponent(config.scope)}`;
-    window.open(authUrl, `${provider} Login`, 'width=600,height=600');
-  };
-
-  document.getElementById('login-strava').addEventListener('click', () => loginWithProvider('strava'));
-  document.getElementById('login-komoot').addEventListener('click', () => loginWithProvider('komoot'));
-  document.getElementById('login-ridewithgps').addEventListener('click', () => loginWithProvider('ridewithgps'));
-
-  const fetchThirdPartyRoutes = async (provider) => {
-    showLoading();
-    return new Promise(resolve => {
-      setTimeout(() => {
-        hideLoading();
-        resolve([
-          [41.3851, 2.1734],
-          [41.3880, 2.1800],
-          [41.3910, 2.1850]
-        ]);
-      }, 1500);
-    });
-  };
-
-  document.getElementById('login-strava').addEventListener('click', async () => {
-    try {
-      const route = await fetchThirdPartyRoutes('strava');
-      renderRoute(route);
-      weatherTasks = await prepareWeatherTasks(route);
-      await fetchWeatherData();
-      renderMapMarkers();
-      updateTimeline();
-      renderTemperatureChart();
-      renderPrecipitationChart();
-      renderWindChart();
-      renderHumidityChart();
-      renderPressureChart();
-      elevationProfile = route.map((coord, i) => ({
-        distance: (i * 1).toFixed(1),
-        elevation: 30 + i * 5
-      }));
-      renderElevationChart();
-    } catch (error) {
-      showError(error.message);
-    }
-  });
-
   // ----------------- File Upload Handling -----------------
   document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -675,18 +611,14 @@
       return;
     }
     const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.gpx')) {
+      showError("Only GPX files are supported at the moment.");
+      return;
+    }
     showLoading();
     try {
-      let routePoints;
-      if (file.name.endsWith('.gpx')) {
-        const text = await file.text();
-        routePoints = parseGPX(text);
-      } else if (file.name.endsWith('.fit')) {
-        const arrayBuffer = await file.arrayBuffer();
-        routePoints = parseFIT(arrayBuffer);
-      } else {
-        throw new Error("Unsupported file format.");
-      }
+      const text = await file.text();
+      const routePoints = parseGPX(text);
       const coords = routePoints.map(pt => [pt.lat, pt.lon]);
       renderRoute(coords);
       weatherTasks = await prepareWeatherTasks(coords);
@@ -726,14 +658,14 @@
         .bindPopup(createPopupContent(task))
         .bindTooltip(`#${index + 1}: ${Math.round(task.weather.temp)}°C`)
         .addTo(map);
-      // When clicking a marker, center the map and open the popup.
+      // When clicking a marker, center the map and open its popup.
       marker.on("click", () => {
         map.setView(task.position, 13, { animate: true });
         marker.openPopup();
       });
       task.marker = marker;
       weatherMarkers.push(marker);
-      // Add wind arrow marker overlay (adjust wind degree so arrow points where wind goes)
+      // Add wind arrow marker overlay. Adjust wind degree so arrow points where wind goes.
       const adjustedWindDeg = ((task.weather.windDeg ?? 0) + 180) % 360;
       const arrowCanvas = createRotatedArrow(adjustedWindDeg);
       const arrowIcon = L.icon({
