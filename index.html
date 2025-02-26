@@ -1,97 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Route Weather Analyst</title>
+  <meta charset="UTF-8">
+  <title>RideWeather Planner</title>
+  <link rel="stylesheet" href="style.css">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <!-- App CSS -->
-  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Loading Overlay -->
-  <div id="loading" class="loading" aria-live="polite">
-    <div class="spinner" role="status"><i class="fas fa-sun fa-spin"></i></div>
-    <div class="loading-text">Processing Route Data...</div>
-  </div>
+  <header>
+    <h1>RideWeather Planner</h1>
+    <p>Plan your ride and check the weather along your route.</p>
+  </header>
+  
+  <nav class="auth-buttons">
+    <button id="login-strava">Login with Strava</button>
+    <button id="login-komoot">Login with Komoot</button>
+    <button id="login-ridewithgps">Login with RideWithGPS</button>
+  </nav>
 
-  <!-- Alerts -->
-  <div id="alerts" class="alerts" aria-live="assertive"></div>
-
-  <!-- Main container: adjusts layout responsively -->
-  <main class="main-container">
-    <section class="map-container">
-      <div class="controls card">
-        <!-- Group inputs: Start Time, Interval, Speed -->
-        <div class="input-row">
-          <div class="input-group">
-            <label for="startTime"><i class="fas fa-clock"></i> Start Time</label>
-            <input type="datetime-local" id="startTime" />
-          </div>
-          <div class="input-group">
-            <label for="weatherInterval"><i class="fas fa-ruler"></i> Interval (km)</label>
-            <input type="number" id="weatherInterval" value="5" min="1" />
-          </div>
-          <div class="input-group">
-            <label for="avgSpeed"><i class="fas fa-tachometer-alt"></i> Speed (km/h)</label>
-            <input type="number" id="avgSpeed" value="20" min="1" />
-          </div>
-        </div>
-        <!-- GPX upload module is last -->
-        <div class="input-group">
-          <label for="gpxUpload"><i class="fas fa-route"></i> GPX File</label>
-          <input type="file" id="gpxUpload" accept=".gpx" />
-        </div>
-        <div class="button-group">
-          <button id="centerRouteBtn" class="btn primary">
-            <i class="fas fa-crosshairs"></i> Center Map
-          </button>
-          <button id="saveGraphicsBtn" class="btn success">
-            <i class="fas fa-download"></i> Save Report
-          </button>
-        </div>
-      </div>
-      <div id="map" class="map"></div>
-    </section>
-
-    <section class="dashboard card">
-      <div class="chart-container">
-        <!-- Wrap each canvas in a chart-wrapper for grid isolation -->
-        <div class="chart-wrapper">
-          <canvas id="tempChart"></canvas>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="precipChart"></canvas>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="windChart"></canvas>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="humidityChart"></canvas>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="pressureChart"></canvas>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="elevationChart"></canvas>
-        </div>
-      </div>
-      <!-- Weather timeline rendered as a full vertical list -->
-      <div class="timeline-container">
-        <h3><i class="fas fa-history"></i> Weather Timeline</h3>
-        <div id="timeline" class="timeline vertical-list"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- External Libraries -->
+  <section class="upload-section">
+    <h2>Upload Route File</h2>
+    <form id="uploadForm">
+      <label for="fileInput">Select GPX or FIT file:</label>
+      <input type="file" id="fileInput" accept=".gpx, .fit">
+      <button type="submit">Upload</button>
+    </form>
+  </section>
+  
+  <section class="route-controls">
+    <label for="startTime">Start Time:</label>
+    <input type="datetime-local" id="startTime">
+    <label for="weatherInterval">Weather Interval (km):</label>
+    <input type="number" id="weatherInterval" value="5">
+    <label for="avgSpeed">Average Speed (km/h):</label>
+    <input type="number" id="avgSpeed" value="20">
+  </section>
+  
+  <section class="forecast-controls">
+    <button id="saveForecast">Save Forecast</button>
+  </section>
+  
+  <section id="map-container">
+    <div id="map"></div>
+    <button id="centerMap">Center Map</button>
+    <div id="loading">Loading...</div>
+  </section>
+  
+  <section class="charts">
+    <div class="chart-wrapper">
+      <canvas id="tempChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="precipChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="windChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="humidityChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="pressureChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="elevationChart"></canvas>
+    </div>
+  </section>
+  
+  <section id="timeline">
+    <!-- Timeline entries will be added here -->
+  </section>
+  
+  <section id="alerts">
+    <!-- Alert messages will be shown here -->
+  </section>
+  
+  <!-- Include Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Include Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <!-- Configuration and App JS -->
+  <!-- Include jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Include the main config and app scripts -->
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

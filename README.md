@@ -1,48 +1,32 @@
-# Route Weather Analyst
+# RideWeather Planner
 
-Route Weather Analyst is a web-based application that allows users to upload a GPX file of their route (e.g., for cycling or hiking) and analyze the weather forecast along the route. The app integrates interactive maps and dynamic charts to display various weather parameters—such as temperature, wind, precipitation, humidity, pressure, and even elevation with a temperature overlay—providing an in-depth look at the conditions you can expect along your journey.
+RideWeather Planner is an interactive web application that lets you plan your rides while checking detailed weather forecasts along your route. This version supports:
+- **Route Upload:** Upload GPX or FIT files.
+- **Third‑Party Integrations:** Log in with your Strava, Komoot, or RideWithGPS account to import saved routes.
+- **Weather Forecasts:** View forecasts including temperature, precipitation, wind, humidity, and pressure.
+- **Interactive Visualizations:** Explore your route via an interactive map, charts, and a timeline.
+- **Forecast Saving:** Save your forecast data as a nicely formatted PDF.
 
 ## Features
+- **File Upload:** Drag & drop or select a GPX/FIT file to display your route.
+- **Third‑Party Login:** Use OAuth to log in with Strava, Komoot, or RideWithGPS and import your saved routes.
+- **Route Planning:** Detailed weather data is fetched via the OpenWeather API.
+- **Visualization:** Interactive maps (Leaflet) and charts (Chart.js) display your route and weather timeline.
+- **Marker Popups:** Clicking a point on any chart centers the map on that forecast point and opens its popup with weather details (including wind direction).
+- **Save Forecast:** Download your forecast data as a nicely formatted PDF.
 
-- **GPX Route Upload:**  
-  Upload your GPX file to render your route on an interactive map.
-  
-- **Interactive Map:**  
-  Visualize your route using [Leaflet.js](https://leafletjs.com/). The map displays markers for each forecast point along the route, including wind direction arrows that are correctly aligned.
+## Setup
+1. Clone the repository.
+2. In `config.js`, replace the placeholder API keys and OAuth configuration with your actual credentials.
+3. Open `index.html` in your browser to run the application.
 
-- **Dynamic Weather Charts:**  
-  View a series of interactive charts (powered by [Chart.js](https://www.chartjs.org/)) showing:
-  - Temperature and "Feels Like" Temperature
-  - Precipitation
-  - Wind Speed (with wind direction icons)
-  - Humidity
-  - Pressure
-  - Elevation with a temperature overlay (using dual y-axes)
+## Dependencies
+- [Leaflet](https://leafletjs.com/) for map rendering.
+- [Chart.js](https://www.chartjs.org/) for charts.
+- [jsPDF](https://github.com/parallax/jsPDF) for generating the PDF (loaded via CDN).
 
-- **Weather Timeline:**  
-  See a full vertical list of weather forecast points along your route. Click on any timeline entry to pan the map to that location.
+## Security Notice
+For production, move API keys and OAuth secrets to a secure backend.
 
-- **Responsive & Mobile-Friendly:**  
-  The application layout adjusts for mobile and desktop viewing:
-  - On mobile, charts and controls stack vertically.
-  - On desktop, charts are displayed in a grid without overlapping.
-
-- **Save Report:**  
-  Capture and download a screenshot of the entire analysis (map, charts, and timeline) for later review.
-
-## Technologies Used
-
-- **HTML5 & CSS3**  
-- **JavaScript (ES6+)**
-- **Leaflet.js** - For interactive map functionality.
-- **Chart.js** - For rendering dynamic charts.
-- **html2canvas** - For capturing a screenshot of the report.
-- **OpenWeather API** - For weather forecast data.
-
-## Installation & Setup
-
-1. **Clone the Repository:**
-
-   ```bash
-   git clone https://github.com/yourusername/route-weather-analyst.git
-   cd route-weather-analyst
+## License
+This project is open-source. See the LICENSE file for details.

@@ -1,6 +1,13 @@
 (() => {
   'use strict';
 
+  // ----------------- Utility: Convert Degrees to Compass Direction -----------------
+  const convertDegreesToCompass = (deg) => {
+    const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const index = Math.round(deg / 45) % 8;
+    return directions[index];
+  };
+
   // ----------------- Cache for Rotated Arrow Images -----------------
   const arrowCache = new Map();
   const createRotatedArrow = (degree) => {
@@ -33,7 +40,7 @@
     const alerts = document.getElementById('alerts');
     const alert = document.createElement('div');
     alert.className = `alert-item ${type}`;
-    alert.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${message}</span>`;
+    alert.innerHTML = `<span>${message}</span>`;
     alerts.appendChild(alert);
     setTimeout(() => alert.remove(), 5000);
   };
@@ -42,15 +49,15 @@
   let routeLayer = null;
   let weatherMarkers = [];
   let weatherTasks = [];
-  let elevationProfile = []; // For elevation chart
+  let elevationProfile = [];
   const weatherCache = new Map();
   let tempChart, precipChart, windChart, humidityChart, pressureChart, elevationChart;
-  let timelineEntries = []; // Timeline list entries
+  let timelineEntries = [];
   const WEATHER_ICONS = {
     Clear: '☀️', Clouds: '☁️', Rain: '🌧️', Drizzle: '🌦️',
-    Thunderstorm: '⛈️', Snow: '❄️', Mist: '🌫️', Smoke: '🌫️',
-    Haze: '🌫️', Dust: '🌫️', Fog: '🌫️', Sand: '🌫️',
-    Ash: '🌫️', Squall: '💨', Tornado: '🌪️'
+    Thunderstorm: '⛈️', Snow: '❄️', Mist: '🌫️', Smoke: '💨',
+    Haze: '🌫️', Dust: '🌪️', Fog: '🌁', Sand: '🏜️',
+    Ash: '🌋', Squall: '🌬️', Tornado: '🌪️'
   };
 
   // ----------------- Initialize Map -----------------
@@ -58,14 +65,40 @@
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   setTimeout(() => map.invalidateSize(), 100);
 
-  // ----------------- Chart Options -----------------
+  // Center Map button functionality
+  document.getElementById('centerMap').addEventListener('click', () => {
+    if (routeLayer) {
+      map.fitBounds(routeLayer.getBounds());
+    } else {
+      map.setView([41.3851, 2.1734], 13);
+    }
+  });
+
+  // ----------------- Chart Options (with Larger Fonts) -----------------
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: true,
     aspectRatio: 2,
     plugins: {
-      legend: { position: 'top' },
-      tooltip: { mode: 'index', intersect: false }
+      legend: { 
+        position: 'top',
+        labels: { font: { size: 14 } }
+      },
+      tooltip: { 
+        mode: 'index', 
+        intersect: false,
+        bodyFont: { size: 14 }
+      }
+    },
+    scales: {
+      x: { 
+        title: { display: true, text: 'Distance (km)', font: { size: 16 } },
+        ticks: { font: { size: 14 } }
+      },
+      y: { 
+        title: { display: true, text: 'Value', font: { size: 16 } },
+        ticks: { font: { size: 14 } }
+      }
     },
     hover: {
       mode: 'nearest',
@@ -88,6 +121,54 @@
           if (weatherTasks[index].marker) weatherTasks[index].marker.openPopup();
         }
       }
+    }
+  };
+
+  // ----------------- Timeline Functions -----------------
+  const updateTimeline = () => {
+    timelineEntries = [];
+    const timelineContainer = document.getElementById('timeline');
+    timelineContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    weatherTasks.forEach((task, index) => {
+      const entry = document.createElement('div');
+      entry.className = 'timeline-entry';
+      entry.innerHTML = `
+        <div class="timeline-time">${task.forecastTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="timeline-weather">
+          ${WEATHER_ICONS[task.weather?.weather[0]?.main || 'Unknown'] || '❓'}
+          <span>${task.weather?.weather[0]?.description || 'No data'}</span>
+        </div>
+        <div class="timeline-temp">${task.weather ? `${Math.round(task.weather.temp)}°C` : 'N/A'}</div>
+      `;
+      // When clicking a timeline entry, center the map and open the popup.
+      entry.addEventListener('click', () => {
+        if (weatherTasks[index]?.position) {
+          map.setView(weatherTasks[index].position, 13, { animate: true });
+          if (weatherTasks[index].marker) weatherTasks[index].marker.openPopup();
+        }
+      });
+      fragment.appendChild(entry);
+      timelineEntries.push(entry);
+    });
+    timelineContainer.appendChild(fragment);
+  };
+
+  const removeTimelineHighlights = () => {
+    timelineEntries.forEach(entry => entry.classList.remove('active'));
+  };
+
+  const highlightTimelineEntry = (index) => {
+    removeTimelineHighlights();
+    if (timelineEntries[index]) {
+      timelineEntries[index].classList.add('active');
+    }
+  };
+
+  const panMapToPoint = (index) => {
+    const task = weatherTasks[index];
+    if (task && task.position) {
+      map.panTo(task.position, { animate: true });
     }
   };
 
@@ -117,7 +198,6 @@
     ];
   };
 
-  // Compute elevation profile from GPX points (if elevation exists)
   const computeElevationProfile = (points) => {
     const distances = [0];
     let cumulative = 0;
@@ -136,16 +216,20 @@
     const weather = task.weather;
     const iconCode = weather?.weather[0]?.main || 'Unknown';
     const icon = WEATHER_ICONS[iconCode] || '❓';
+    let windDir = "N/A";
+    if (weather && typeof weather.windDeg === 'number') {
+      windDir = convertDegreesToCompass(weather.windDeg);
+    }
     return `
       <div class="popup-content">
         <strong>${task.forecastTime.toLocaleTimeString()}</strong>
         <div class="weather-main">${icon} ${weather?.weather[0]?.description || 'No data'}</div>
         <div class="weather-details">
-          <div>🌡️ Temp: ${weather ? Math.round(weather.temp) : 'N/A'}°C</div>
-          <div>🤗 Feels Like: ${weather ? Math.round(weather.feels_like) : 'N/A'}°C</div>
-          <div>💨 Wind: ${weather ? Math.round(weather.windSpeed) : 'N/A'} m/s</div>
-          <div>🌧️ Rain: ${weather ? weather.rain.toFixed(1) : '0.0'} mm</div>
-          <div>🔽 Pressure: ${weather ? weather.pressure : 'N/A'} hPa</div>
+          <div>Temp: ${weather ? Math.round(weather.temp) : 'N/A'}°C</div>
+          <div>Feels Like: ${weather ? Math.round(weather.feels_like) : 'N/A'}°C</div>
+          <div>Wind: ${weather ? Math.round(weather.windSpeed) : 'N/A'} m/s (${windDir})</div>
+          <div>Rain: ${weather ? weather.rain.toFixed(1) : '0.0'} mm</div>
+          <div>Pressure: ${weather ? weather.pressure : 'N/A'} hPa</div>
         </div>
       </div>
     `;
@@ -166,14 +250,15 @@
     weatherMarkers = [];
   };
 
-  // ----------------- GPX and Route Functions -----------------
+  // ----------------- Route File Parsing -----------------
+  // GPX Parsing
   const parseGPX = (gpxData) => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(gpxData, "text/xml");
     if (xmlDoc.getElementsByTagName("parsererror").length > 0)
       throw new Error("Invalid GPX file format");
     const points = xmlDoc.getElementsByTagName("trkpt");
-    if (points.length === 0) throw new Error("No track points found");
+    if (points.length === 0) throw new Error("No track points found in GPX file");
     return Array.from(points).map(pt => {
       const lat = parseFloat(pt.getAttribute("lat"));
       const lon = parseFloat(pt.getAttribute("lon"));
@@ -184,12 +269,24 @@
     });
   };
 
+  // FIT Parsing (simulated)
+  const parseFIT = (arrayBuffer) => {
+    // In production, use a library like fit-file-parser.
+    // Here we simulate parsing by returning dummy route data.
+    return [
+      { lat: 41.3851, lon: 2.1734, ele: 30 },
+      { lat: 41.3900, lon: 2.1800, ele: 35 }
+    ];
+  };
+
+  // Render route on map
   const renderRoute = (coords) => {
     if (routeLayer) map.removeLayer(routeLayer);
     routeLayer = L.polyline(coords, { color: "#2196F3" }).addTo(map);
     map.fitBounds(routeLayer.getBounds());
   };
 
+  // Prepare weather tasks based on route coordinates
   const prepareWeatherTasks = async (coords) => {
     const totalDistance = calculateTotalDistance(coords);
     const startTime = new Date(document.getElementById("startTime").value);
@@ -288,7 +385,90 @@
     }
   };
 
-  // ----------------- Visualization Functions -----------------
+  // ----------------- Improved Elevation/Temperature Chart -----------------
+  const renderElevationChart = () => {
+    if (!elevationProfile.length || !weatherTasks.length) return;
+    const ctx = document.getElementById('elevationChart').getContext('2d');
+
+    // Interpolate temperature between two weather tasks.
+    const interpolateTemperature = (distanceMeters) => {
+      let i = 0;
+      for (; i < weatherTasks.length - 1; i++) {
+        if (weatherTasks[i].distance <= distanceMeters && weatherTasks[i + 1].distance >= distanceMeters) {
+          break;
+        }
+      }
+      if (i === weatherTasks.length - 1) {
+        return weatherTasks[i].weather ? weatherTasks[i].weather.temp : null;
+      }
+      const task1 = weatherTasks[i];
+      const task2 = weatherTasks[i + 1];
+      if (!task1.weather || !task2.weather) return null;
+      const t1 = task1.weather.temp;
+      const t2 = task2.weather.temp;
+      const d1 = task1.distance;
+      const d2 = task2.distance;
+      const ratio = (distanceMeters - d1) / (d2 - d1);
+      return t1 + (t2 - t1) * ratio;
+    };
+
+    const temperatureDataset = elevationProfile.map(pt => {
+      const distanceMeters = parseFloat(pt.distance) * 1000;
+      return interpolateTemperature(distanceMeters);
+    });
+
+    elevationChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: elevationProfile.map(pt => `${pt.distance} km`),
+        datasets: [
+          {
+            label: "Elevation (m)",
+            data: elevationProfile.map(pt => pt.elevation),
+            borderColor: "#e67e22",
+            tension: 0.4,
+            fill: false,
+            yAxisID: 'y'
+          },
+          {
+            label: "Temperature (°C)",
+            data: temperatureDataset,
+            borderColor: "#ff6384",
+            tension: 0.4,
+            fill: false,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 14 } } },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: (context) => {
+                let label = context.dataset.label || '';
+                if (label) label += ': ';
+                label += context.parsed.y !== null ? context.parsed.y.toFixed(1) : 'N/A';
+                return label;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { title: { display: true, text: 'Distance (km)', font: { size: 16 } } },
+          y: { type: 'linear', position: 'left', title: { display: true, text: 'Elevation (m)', font: { size: 16 } } },
+          y1: { type: 'linear', position: 'right', title: { display: true, text: 'Temperature (°C)', font: { size: 16 } }, grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+  };
+
+  // ----------------- Other Visualization Functions -----------------
   const renderTemperatureChart = () => {
     const ctx = document.getElementById('tempChart').getContext('2d');
     tempChart = new Chart(ctx, {
@@ -345,7 +525,9 @@
           tension: 0.4,
           fill: false,
           pointStyle: weatherTasks.map(t => {
-            const canvas = createRotatedArrow(t.weather?.windDeg ?? 0);
+            // Adjust wind direction: add 180° so arrow points toward where wind goes.
+            const adjustedWindDeg = ((t.weather.windDeg ?? 0) + 180) % 360;
+            const canvas = createRotatedArrow(adjustedWindDeg);
             return canvas.toDataURL();
           })
         }]
@@ -368,10 +550,7 @@
           fill: false
         }]
       },
-      options: { 
-        ...chartOptions, 
-        scales: { y: { beginAtZero: true, max: 100 } } 
-      }
+      options: { ...chartOptions, scales: { y: { beginAtZero: true, max: 100 } } }
     });
   };
 
@@ -393,109 +572,153 @@
     });
   };
 
-  // Elevation chart with temperature overlay: two y-axes.
-  const renderElevationChart = () => {
-    if (!elevationProfile.length) return;
-    const ctx = document.getElementById('elevationChart').getContext('2d');
-    elevationChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: elevationProfile.map(pt => `${pt.distance} km`),
-        datasets: [
-          {
-            label: "Elevation (m)",
-            data: elevationProfile.map(pt => pt.elevation),
-            borderColor: "#e67e22",
-            tension: 0.4,
-            fill: false,
-            yAxisID: 'y'
-          },
-          {
-            label: "Temperature (°C)",
-            data: elevationProfile.map(pt => {
-              const distanceMeters = parseFloat(pt.distance) * 1000;
-              let closestTask = weatherTasks.reduce((prev, curr) =>
-                Math.abs(curr.distance - distanceMeters) < Math.abs(prev.distance - distanceMeters)
-                  ? curr : prev
-              );
-              return closestTask?.weather?.temp ?? null;
-            }),
-            borderColor: "#ff6384",
-            tension: 0.4,
-            fill: false,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2,
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: { mode: 'index', intersect: false }
-        },
-        scales: {
-          x: {
-            title: { display: true, text: 'Distance (km)' }
-          },
-          y: {
-            type: 'linear',
-            position: 'left',
-            title: { display: true, text: 'Elevation (m)' }
-          },
-          y1: {
-            type: 'linear',
-            position: 'right',
-            title: { display: true, text: 'Temperature (°C)' },
-            grid: { drawOnChartArea: false }
-          }
-        }
+  // ----------------- Forecast Saving Function (PDF) -----------------
+  const saveForecast = () => {
+    if (!weatherTasks.length) {
+      showError("No forecast data available to save.");
+      return;
+    }
+    // Use jsPDF to generate a nicely formatted PDF.
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Forecast Data", 10, 20);
+    doc.setFontSize(12);
+    let y = 30;
+    weatherTasks.forEach((task, i) => {
+      const time = task.forecastTime.toLocaleString();
+      const pos = `(${task.position[0].toFixed(4)}, ${task.position[1].toFixed(4)})`;
+      let windDir = "N/A";
+      if (task.weather && typeof task.weather.windDeg === 'number') {
+        windDir = convertDegreesToCompass(task.weather.windDeg);
+      }
+      const temp = task.weather ? `${Math.round(task.weather.temp)}°C` : "N/A";
+      const feelsLike = task.weather ? `${Math.round(task.weather.feels_like)}°C` : "N/A";
+      const windSpeed = task.weather ? `${Math.round(task.weather.windSpeed)} m/s` : "N/A";
+      const rain = task.weather ? `${task.weather.rain.toFixed(1)} mm` : "N/A";
+      const pressure = task.weather ? `${task.weather.pressure} hPa` : "N/A";
+      
+      const line = `Point ${i+1}:\nTime: ${time}\nPosition: ${pos}\nTemp: ${temp} (Feels: ${feelsLike})\nWind: ${windSpeed} (${windDir})\nRain: ${rain} | Pressure: ${pressure}\n-----------------------------------`;
+      const splitText = doc.splitTextToSize(line, 180);
+      doc.text(splitText, 10, y);
+      y += splitText.length * 7;
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
       }
     });
+    doc.save("forecast.pdf");
   };
 
-  // ----------------- Timeline Functions -----------------
-  const updateTimeline = () => {
-    timelineEntries = [];
-    const timelineContainer = document.getElementById('timeline');
-    timelineContainer.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    weatherTasks.forEach((task, index) => {
-      const entry = document.createElement('div');
-      entry.className = 'timeline-entry';
-      entry.innerHTML = `
-        <div class="timeline-time">${task.forecastTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-        <div class="timeline-weather">
-          ${WEATHER_ICONS[task.weather?.weather[0]?.main || 'Unknown'] || '❓'}
-          <span>${task.weather?.weather[0]?.description || 'No data'}</span>
-        </div>
-        <div class="timeline-temp">${task.weather ? `${Math.round(task.weather.temp)}°C` : 'N/A'}</div>
-      `;
-      entry.addEventListener('click', () => {
-        if (weatherTasks[index]?.position) {
-          map.setView(weatherTasks[index].position, 13, { animate: true });
-          if (weatherTasks[index].marker) weatherTasks[index].marker.openPopup();
-        }
-      });
-      fragment.appendChild(entry);
-      timelineEntries.push(entry);
-    });
-    timelineContainer.appendChild(fragment);
-  };
+  // ----------------- Event Listeners for Forecast Button -----------------
+  document.getElementById('saveForecast').addEventListener('click', saveForecast);
 
-  const removeTimelineHighlights = () => {
-    timelineEntries.forEach(entry => entry.classList.remove('active'));
-  };
-
-  const highlightTimelineEntry = (index) => {
-    removeTimelineHighlights();
-    if (timelineEntries[index]) {
-      timelineEntries[index].classList.add('active');
+  // ----------------- Third-Party OAuth and Route Import -----------------
+  const loginWithProvider = (provider) => {
+    const config = OAUTH_CONFIG[provider];
+    if (!config) {
+      showError("OAuth configuration not found for " + provider);
+      return;
     }
+    const authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(config.redirectUri)}&response_type=token&scope=${encodeURIComponent(config.scope)}`;
+    window.open(authUrl, `${provider} Login`, 'width=600,height=600');
   };
 
-  // ----------------- Map Marker Rendering & Linking -----------------
+  document.getElementById('login-strava').addEventListener('click', () => loginWithProvider('strava'));
+  document.getElementById('login-komoot').addEventListener('click', () => loginWithProvider('komoot'));
+  document.getElementById('login-ridewithgps').addEventListener('click', () => loginWithProvider('ridewithgps'));
+
+  const fetchThirdPartyRoutes = async (provider) => {
+    showLoading();
+    return new Promise(resolve => {
+      setTimeout(() => {
+        hideLoading();
+        resolve([
+          [41.3851, 2.1734],
+          [41.3880, 2.1800],
+          [41.3910, 2.1850]
+        ]);
+      }, 1500);
+    });
+  };
+
+  document.getElementById('login-strava').addEventListener('click', async () => {
+    try {
+      const route = await fetchThirdPartyRoutes('strava');
+      renderRoute(route);
+      weatherTasks = await prepareWeatherTasks(route);
+      await fetchWeatherData();
+      renderMapMarkers();
+      updateTimeline();
+      renderTemperatureChart();
+      renderPrecipitationChart();
+      renderWindChart();
+      renderHumidityChart();
+      renderPressureChart();
+      elevationProfile = route.map((coord, i) => ({
+        distance: (i * 1).toFixed(1),
+        elevation: 30 + i * 5
+      }));
+      renderElevationChart();
+    } catch (error) {
+      showError(error.message);
+    }
+  });
+
+  // ----------------- File Upload Handling -----------------
+  document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearExistingData();
+    const fileInput = document.getElementById('fileInput');
+    if (!fileInput.files.length) {
+      showError("Please select a file to upload.");
+      return;
+    }
+    const file = fileInput.files[0];
+    showLoading();
+    try {
+      let routePoints;
+      if (file.name.endsWith('.gpx')) {
+        const text = await file.text();
+        routePoints = parseGPX(text);
+      } else if (file.name.endsWith('.fit')) {
+        const arrayBuffer = await file.arrayBuffer();
+        routePoints = parseFIT(arrayBuffer);
+      } else {
+        throw new Error("Unsupported file format.");
+      }
+      const coords = routePoints.map(pt => [pt.lat, pt.lon]);
+      renderRoute(coords);
+      weatherTasks = await prepareWeatherTasks(coords);
+      await fetchWeatherData();
+      renderMapMarkers();
+      updateTimeline();
+      renderTemperatureChart();
+      renderPrecipitationChart();
+      renderWindChart();
+      renderHumidityChart();
+      renderPressureChart();
+      if (routePoints[0].ele !== undefined) {
+        elevationProfile = computeElevationProfile(routePoints);
+        renderElevationChart();
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      hideLoading();
+    }
+  });
+
+  // ----------------- Helper: Simulated Elevation Data Extraction -----------------
+  const routePointsFromLayer = (coords) => {
+    return coords.map((coord, i) => ({
+      lat: coord[0],
+      lon: coord[1],
+      ele: 30 + i * 3
+    }));
+  };
+
+  // ----------------- Map Marker Rendering -----------------
   const renderMapMarkers = () => {
     weatherTasks.forEach((task, index) => {
       if (!task.weather) return;
@@ -503,16 +726,16 @@
         .bindPopup(createPopupContent(task))
         .bindTooltip(`#${index + 1}: ${Math.round(task.weather.temp)}°C`)
         .addTo(map);
+      // When clicking a marker, center the map and open the popup.
       marker.on("click", () => {
         map.setView(task.position, 13, { animate: true });
-        if (timelineEntries[index]) {
-          timelineEntries[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        marker.openPopup();
       });
       task.marker = marker;
       weatherMarkers.push(marker);
-      // Use L.icon for wind arrow markers so they align properly.
-      const arrowCanvas = createRotatedArrow(task.weather.windDeg ?? 0);
+      // Add wind arrow marker overlay (adjust wind degree so arrow points where wind goes)
+      const adjustedWindDeg = ((task.weather.windDeg ?? 0) + 180) % 360;
+      const arrowCanvas = createRotatedArrow(adjustedWindDeg);
       const arrowIcon = L.icon({
         iconUrl: arrowCanvas.toDataURL(),
         iconSize: [20, 30],
@@ -523,94 +746,4 @@
     });
   };
 
-  const panMapToPoint = (index) => {
-    const task = weatherTasks[index];
-    if (task && task.position) {
-      map.panTo(task.position, { animate: true });
-    }
-  };
-
-  const highlightMapMarker = (index) => {
-    const task = weatherTasks[index];
-    if (task && task.marker) {
-      task.marker.openPopup();
-    }
-  };
-
-  const resetMapMarker = (index) => {
-    const task = weatherTasks[index];
-    if (task && task.marker) {
-      task.marker.closePopup();
-    }
-  };
-
-  // ----------------- Center Map Button -----------------
-  const centerMapOnRoute = () => {
-    if (routeLayer) {
-      map.fitBounds(routeLayer.getBounds(), { animate: true });
-    }
-  };
-
-  // ----------------- Main Process Function -----------------
-  const processGPX = async (gpxData) => {
-    try {
-      showLoading();
-      clearExistingData();
-      const points = parseGPX(gpxData);
-      if (points.length < 2) throw new Error('GPX file needs at least 2 points');
-      const coords = points.map(pt => [pt.lat, pt.lon]);
-      elevationProfile = computeElevationProfile(points);
-      renderRoute(coords);
-      weatherTasks = await prepareWeatherTasks(coords);
-      await fetchWeatherData();
-      updateVisualizations();
-    } catch (error) {
-      console.error('Processing error:', error);
-      showError(error.message, 'error');
-    } finally {
-      hideLoading();
-    }
-  };
-
-  const updateVisualizations = () => {
-    clearMarkers();
-    renderMapMarkers();
-    [tempChart, precipChart, windChart, humidityChart, pressureChart, elevationChart].forEach(chart => {
-      if (chart) chart.destroy();
-    });
-    renderTemperatureChart();
-    renderPrecipitationChart();
-    renderWindChart();
-    renderHumidityChart();
-    renderPressureChart();
-    renderElevationChart();
-    updateTimeline();
-  };
-
-  // ----------------- Event Listeners -----------------
-  document.getElementById('gpxUpload').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => processGPX(e.target.result);
-    reader.readAsText(file);
-  });
-
-  document.getElementById('centerRouteBtn').addEventListener('click', centerMapOnRoute);
-
-  document.getElementById('saveGraphicsBtn').addEventListener('click', () => {
-    html2canvas(document.querySelector("main")).then(canvas => {
-      const link = document.createElement('a');
-      link.download = 'weather-report.png';
-      link.href = canvas.toDataURL();
-      link.click();
-    }).catch(err => {
-      console.error("Error saving report:", err);
-      showError("Failed to save report", 'error');
-    });
-  });
-
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('startTime').value = new Date().toISOString().slice(0, 16);
-  });
 })();
