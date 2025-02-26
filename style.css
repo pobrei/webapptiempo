@@ -25,9 +25,10 @@ body {
   line-height: 1.6;
 }
 
-.container {
-  display: grid;
-  grid-template-columns: 1fr;
+/* Main container for overall layout */
+.main-container {
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   padding: 1rem;
   max-width: 1600px;
@@ -49,15 +50,22 @@ body {
 }
 
 .input-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  .input-row {
+    flex-direction: row;
+  }
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
 }
 
 .input-group label {
@@ -118,59 +126,82 @@ input:focus {
   border: 1px solid #eee;
 }
 
+/* Dashboard: vertical stacking */
 .dashboard {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
 }
 
+/* Chart container: use grid with isolated wrappers */
 .chart-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
 }
 
-/* Reduce chart height on desktop */
-canvas {
-  width: 100% !important;
-  height: auto !important;
+.chart-wrapper {
+  position: relative;
+  height: 300px;
 }
 
+.chart-wrapper canvas {
+  width: 100% !important;
+  display: block;
+}
+
+@media (min-width: 800px) {
+  .chart-container {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* Vertical timeline list */
 .timeline-container {
-  background: var(--card-bg);
   padding: 1rem;
 }
 
 .timeline-container h3 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
-#timeline {
+.timeline {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .timeline-entry {
-  padding: 1rem;
   background: #f8f9fa;
+  padding: 0.5rem;
   border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  animation: fadeIn 0.3s ease;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.timeline-entry:hover {
-  background: #f1f3f5;
+.timeline-entry:hover,
+.timeline-entry.active {
+  background: var(--primary);
+  color: #fff;
 }
 
+.timeline-time {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.timeline-weather {
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.timeline-temp {
+  font-size: 0.9rem;
+}
+
+/* Loading Overlay */
 .loading {
   position: fixed;
   top: 0;
@@ -201,6 +232,7 @@ canvas {
   color: #666;
 }
 
+/* Alerts */
 .alerts {
   position: fixed;
   top: 1rem;
@@ -250,5 +282,14 @@ canvas {
 
 /* Optional: style for the wind arrow marker */
 .wind-arrow-icon {
-  margin-top: -25px;
+  /* Remove extra margin to avoid shifting */
+  margin: 0;
+}
+
+/* Mobile Friendly Adjustments */
+@media (max-width: 600px) {
+  .btn {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+  }
 }
