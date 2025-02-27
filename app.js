@@ -37,6 +37,7 @@
   const showLoading = () => document.getElementById('loading').classList.add('active');
   const hideLoading = () => document.getElementById('loading').classList.remove('active');
   const showError = (message, type = 'error') => {
+    console.error(message);
     const alerts = document.getElementById('alerts');
     const alert = document.createElement('div');
     alert.className = `alert-item ${type}`;
@@ -45,14 +46,17 @@
     setTimeout(() => alert.remove(), 5000);
   };
 
-  // ----------------- Application State -----------------
+  // ----------------- Global Application State -----------------
   let routeLayer = null;
   let weatherMarkers = [];
+  let arrowMarkers = []; // Array for arrow markers.
   let weatherTasks = [];
   let elevationProfile = [];
   const weatherCache = new Map();
   let tempChart, precipChart, windChart, humidityChart, pressureChart, elevationChart;
   let timelineEntries = [];
+  let currentRoutePoints = null;
+  let currentRouteCoords = null;
   const WEATHER_ICONS = {
     Clear: '☀️', Clouds: '☁️', Rain: '🌧️', Drizzle: '🌦️',
     Thunderstorm: '⛈️', Snow: '❄️', Mist: '🌫️', Smoke: '💨',
@@ -64,8 +68,6 @@
   const map = L.map('map').setView([41.3851, 2.1734], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   setTimeout(() => map.invalidateSize(), 100);
-
-  // Center Map button functionality
   document.getElementById('centerMap').addEventListener('click', () => {
     if (routeLayer) {
       map.fitBounds(routeLayer.getBounds());
@@ -74,7 +76,7 @@
     }
   });
 
-  // ----------------- Chart Options (with Larger Fonts) -----------------
+  // ----------------- Chart Options -----------------
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: true,
@@ -141,7 +143,6 @@
         </div>
         <div class="timeline-temp">${task.weather ? `${Math.round(task.weather.temp)}°C` : 'N/A'}</div>
       `;
-      // When clicking a timeline entry, center the map and open the popup.
       entry.addEventListener('click', () => {
         if (weatherTasks[index]?.position) {
           map.setView(weatherTasks[index].position, 13, { animate: true });
@@ -235,14 +236,16 @@
     `;
   };
 
-  // ----------------- Clear Existing Data -----------------
-  const clearExistingData = () => {
-    if (routeLayer) map.removeLayer(routeLayer);
+  // ----------------- Clear Existing Forecast Data (Keep Route Polyline) -----------------
+  const clearForecastData = () => {
     clearMarkers();
+    arrowMarkers.forEach(marker => map.removeLayer(marker));
+    arrowMarkers = [];
+    weatherTasks = [];
     [tempChart, precipChart, windChart, humidityChart, pressureChart, elevationChart].forEach(chart => {
       if (chart) chart.destroy();
     });
-    document.getElementById('alerts').innerHTML = '';
+    document.getElementById('timeline').innerHTML = '';
   };
 
   const clearMarkers = () => {
@@ -250,7 +253,7 @@
     weatherMarkers = [];
   };
 
-  // ----------------- Route File Parsing (GPX Only) -----------------
+  // ----------------- GPX File Parsing -----------------
   const parseGPX = (gpxData) => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(gpxData, "text/xml");
@@ -270,7 +273,10 @@
 
   // ----------------- Render Route on Map -----------------
   const renderRoute = (coords) => {
-    if (routeLayer) map.removeLayer(routeLayer);
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
+    }
     routeLayer = L.polyline(coords, { color: "#2196F3" }).addTo(map);
     map.fitBounds(routeLayer.getBounds());
   };
@@ -378,8 +384,6 @@
   const renderElevationChart = () => {
     if (!elevationProfile.length || !weatherTasks.length) return;
     const ctx = document.getElementById('elevationChart').getContext('2d');
-
-    // Interpolate temperature between two weather tasks.
     const interpolateTemperature = (distanceMeters) => {
       let i = 0;
       for (; i < weatherTasks.length - 1; i++) {
@@ -514,7 +518,6 @@
           tension: 0.4,
           fill: false,
           pointStyle: weatherTasks.map(t => {
-            // Adjust wind direction so arrow points where wind goes (add 180°)
             const adjustedWindDeg = ((t.weather.windDeg ?? 0) + 180) % 360;
             const canvas = createRotatedArrow(adjustedWindDeg);
             return canvas.toDataURL();
@@ -598,8 +601,35 @@
     doc.save("forecast.pdf");
   };
 
-  // ----------------- Event Listeners for Forecast Button -----------------
   document.getElementById('saveForecast').addEventListener('click', saveForecast);
+
+  // ----------------- Update Forecast on Start Time Change -----------------
+  document.getElementById('startTime').addEventListener('change', async () => {
+    if (currentRouteCoords) {
+      await updateForecast();
+    }
+  });
+
+  const updateForecast = async () => {
+    clearForecastData();
+    try {
+      weatherTasks = await prepareWeatherTasks(currentRouteCoords);
+      await fetchWeatherData();
+      renderMapMarkers();
+      updateTimeline();
+      renderTemperatureChart();
+      renderPrecipitationChart();
+      renderWindChart();
+      renderHumidityChart();
+      renderPressureChart();
+      if (currentRoutePoints && currentRoutePoints[0].ele !== undefined) {
+        elevationProfile = computeElevationProfile(currentRoutePoints);
+        renderElevationChart();
+      }
+    } catch (error) {
+      showError(error.message);
+    }
+  };
 
   // ----------------- File Upload Handling -----------------
   document.getElementById('uploadForm').addEventListener('submit', async (e) => {
@@ -620,6 +650,8 @@
       const text = await file.text();
       const routePoints = parseGPX(text);
       const coords = routePoints.map(pt => [pt.lat, pt.lon]);
+      currentRoutePoints = routePoints;
+      currentRouteCoords = coords;
       renderRoute(coords);
       weatherTasks = await prepareWeatherTasks(coords);
       await fetchWeatherData();
@@ -650,6 +682,15 @@
     }));
   };
 
+  // ----------------- Clear Existing Data (Route and Forecast) -----------------
+  const clearExistingData = () => {
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
+    }
+    clearForecastData();
+  };
+
   // ----------------- Map Marker Rendering -----------------
   const renderMapMarkers = () => {
     weatherTasks.forEach((task, index) => {
@@ -658,14 +699,12 @@
         .bindPopup(createPopupContent(task))
         .bindTooltip(`#${index + 1}: ${Math.round(task.weather.temp)}°C`)
         .addTo(map);
-      // When clicking a marker, center the map and open its popup.
       marker.on("click", () => {
         map.setView(task.position, 13, { animate: true });
         marker.openPopup();
       });
       task.marker = marker;
       weatherMarkers.push(marker);
-      // Add wind arrow marker overlay. Adjust wind degree so arrow points where wind goes.
       const adjustedWindDeg = ((task.weather.windDeg ?? 0) + 180) % 360;
       const arrowCanvas = createRotatedArrow(adjustedWindDeg);
       const arrowIcon = L.icon({
@@ -674,7 +713,8 @@
         iconAnchor: [10, 15],
         popupAnchor: [0, -15]
       });
-      L.marker(task.position, { icon: arrowIcon, zIndexOffset: 1000 }).addTo(map);
+      const arrowMarker = L.marker(task.position, { icon: arrowIcon, zIndexOffset: 1000 }).addTo(map);
+      arrowMarkers.push(arrowMarker);
     });
   };
 

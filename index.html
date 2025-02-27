@@ -12,18 +12,8 @@
     <h1>RideWeather Planner</h1>
     <p>Plan your ride and check the weather along your route.</p>
   </header>
-  
-  <!-- Login buttons removed -->
 
-  <section class="upload-section">
-    <h2>Upload Route File</h2>
-    <form id="uploadForm">
-      <label for="fileInput">Select GPX file:</label>
-      <input type="file" id="fileInput" accept=".gpx">
-      <button type="submit">Upload</button>
-    </form>
-  </section>
-  
+  <!-- Route controls (set parameters before uploading the GPX file) -->
   <section class="route-controls">
     <label for="startTime">Start Time:</label>
     <input type="datetime-local" id="startTime">
@@ -31,6 +21,16 @@
     <input type="number" id="weatherInterval" value="5">
     <label for="avgSpeed">Average Speed (km/h):</label>
     <input type="number" id="avgSpeed" value="20">
+  </section>
+  
+  <!-- GPX upload is now the last step -->
+  <section class="upload-section">
+    <h2>Upload GPX File</h2>
+    <form id="uploadForm">
+      <label for="fileInput">Select GPX file:</label>
+      <input type="file" id="fileInput" accept=".gpx">
+      <button type="submit">Upload</button>
+    </form>
   </section>
   
   <section class="forecast-controls">
@@ -72,13 +72,24 @@
     <!-- Alert messages will be shown here -->
   </section>
   
-  <!-- Include Leaflet JS -->
+  <!-- Set default start time to tomorrow at 8:00 AM -->
+  <script>
+    const startTimeInput = document.getElementById('startTime');
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    tomorrow.setHours(8, 0, 0, 0);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
+    const hh = String(tomorrow.getHours()).padStart(2, '0');
+    const min = String(tomorrow.getMinutes()).padStart(2, '0');
+    startTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  </script>
+  
+  <!-- Include Libraries and Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- Include Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Include jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- Include the main config and app scripts -->
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>

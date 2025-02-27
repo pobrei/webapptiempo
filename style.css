@@ -18,8 +18,8 @@ header {
   text-align: center;
 }
 
-.upload-section,
 .route-controls,
+.upload-section,
 .forecast-controls {
   padding: 1rem;
   background: #fff;
@@ -113,6 +113,13 @@ header {
   justify-items: center;
 }
 
+/* For iPhone/Safari, display one chart per row */
+@media (max-width: 768px) {
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}
+
 .chart-wrapper {
   background: #fff;
   padding: 1rem;
@@ -168,26 +175,4 @@ header {
 }
 .alert-item.warning {
   background: #ff9800;
-}
-
-/* Mobile Specific Adjustments */
-@media (max-width: 768px) {
-  body {
-    text-align: center;
-  }
-  .upload-section,
-  .route-controls,
-  .forecast-controls {
-    width: 90%;
-    text-align: center;
-  }
-  .charts {
-    grid-template-columns: 1fr;
-  }
-  .chart-wrapper {
-    max-width: 90%;
-  }
-  #timeline {
-    text-align: center;
-  }
 }
