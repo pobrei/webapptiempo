@@ -717,5 +717,4 @@
       arrowMarkers.push(arrowMarker);
     });
   };
-
 })();

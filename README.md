@@ -8,7 +8,8 @@ RideWeather Planner is an interactive web application that lets you plan your ri
 - **Dynamic Forecast:** Based on your route and start time, weather forecast markers and arrows are displayed on the map.
 - **Responsive Charts:** View detailed charts (temperature, precipitation, wind speed, humidity, pressure, and elevation/temperature) that adjust for mobile devices.
 - **Forecast Saving:** Save the forecast data as a nicely formatted PDF.
-- **Update on Parameter Change:** Changing the start time (or re-uploading a new GPX file) clears the previous data and updates the forecast.
+- **Dark Mode:** Toggle between light and dark themes for a customized viewing experience.
+- **Interactive Timeline:** Clickable timeline entries that center the map and show forecast details.
 
 ## Setup
 1. Clone the repository.
