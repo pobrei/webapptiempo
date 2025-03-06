@@ -1,0 +1,284 @@
+/* style.css */
+
+/* Reset and global settings */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  color: #1c1c1e;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+  background: #1c1c1e;
+  color: #ffffff;
+}
+
+body.dark-mode header {
+  background: #2c2c2e;
+  border-bottom: 1px solid #3a3a3c;
+}
+
+body.dark-mode .route-controls,
+body.dark-mode .upload-section,
+body.dark-mode .forecast-controls,
+body.dark-mode .chart-wrapper,
+body.dark-mode #timeline {
+  background: #2c2c2e;
+  border: 1px solid #3a3a3c;
+}
+
+body.dark-mode input[type="datetime-local"],
+body.dark-mode input[type="number"],
+body.dark-mode input[type="file"] {
+  background: #3a3a3c;
+  color: #ffffff;
+  border: 1px solid #4a4a4c;
+}
+
+body.dark-mode button {
+  background: #0a84ff;
+}
+
+body.dark-mode button:hover {
+  background: #0060df;
+}
+
+body.dark-mode #centerMap {
+  background: rgba(10,132,255,0.9);
+}
+
+body.dark-mode #centerMap:hover {
+  background: rgba(10,132,255,1);
+}
+
+body.dark-mode #loading {
+  background: rgba(44,44,46,0.9);
+  color: #ffffff;
+}
+
+/* Header styling */
+header {
+  background: #ffffff;
+  padding: 2rem 1rem;
+  border-bottom: 1px solid #dcdcdc;
+  text-align: center;
+}
+
+.header-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+header p {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: #555;
+}
+
+/* Section cards (route controls, upload, forecast) */
+.route-controls,
+.upload-section,
+.forecast-controls {
+  background: #fff;
+  padding: 1.5rem;
+  margin: 1rem auto;
+  max-width: 800px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  text-align: left;
+}
+
+/* Labels and inputs */
+.route-controls label,
+.upload-section label {
+  font-size: 0.9rem;
+  color: #333;
+  margin-right: 0.5rem;
+}
+
+input[type="datetime-local"],
+input[type="number"],
+input[type="file"] {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Buttons */
+button {
+  background: #007aff;
+  border: none;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background: #005ecb;
+}
+
+/* Forecast Controls */
+.forecast-controls {
+  text-align: center;
+}
+
+/* Map container */
+#map-container {
+  position: relative;
+  height: 500px;
+  margin: 1rem auto;
+  max-width: 1000px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Map itself */
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+/* Center map button on map */
+#centerMap {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  padding: 0.5rem 1rem;
+  background: rgba(0,122,255,0.9);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+  z-index: 1001;
+}
+
+#centerMap:hover {
+  background: rgba(0,122,255,1);
+}
+
+/* Loading indicator */
+#loading {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  display: none;
+  font-size: 1rem;
+  color: #1c1c1e;
+  z-index: 1001;
+}
+
+#loading.active {
+  display: block;
+}
+
+/* Charts Grid */
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 1200px;
+  margin: auto;
+  justify-items: center;
+  align-items: start;
+}
+
+/* Responsive Chart Wrapper */
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 600px; /* cap how wide each chart can get */
+  height: 400px;    /* define a fixed height for the chart */
+  overflow: hidden; /* prevent overflow outside container */
+  margin: 0 auto;
+}
+
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Timeline styling */
+#timeline {
+  padding: 1rem;
+  background: #f9f9f9;
+  margin: 1rem auto;
+  max-width: 1200px;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.timeline-entry {
+  display: inline-block;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 120px;
+  text-align: center;
+  font-size: 0.9rem;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.timeline-entry.active {
+  border-color: #007aff;
+  background: #e6f0ff;
+}
+
+/* Alerts */
+#alerts {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1002;
+  font-size: 0.9rem;
+}
+
+.alert-item {
+  background: #f44336;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+}
+
+.alert-item.warning {
+  background: #ff9800;
+}
+
+/* Responsive adjustments for smaller devices */
+@media (max-width: 768px) {
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}

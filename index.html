@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RideWeather Planner</title>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Leaflet CSS for map rendering -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Tailwind CSS for rapid UI styling -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 text-center">
+    <div class="flex justify-center items-center gap-4">
+      <h1 class="text-3xl font-bold">RideWeather Planner</h1>
+      <button id="darkModeToggle" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+        Toggle Dark Mode
+      </button>
+    </div>
+    <p class="text-gray-600 dark:text-gray-300 mt-2">Plan your ride and check the weather along your route.</p>
+  </header>
+
+  <!-- Route Controls -->
+  <section class="route-controls p-6 max-w-3xl mx-auto">
+    <label for="startTime" class="mr-2">Start Time:</label>
+    <input type="datetime-local" id="startTime" class="p-2 border rounded">
+    <label for="weatherInterval" class="ml-4 mr-2">Weather Interval (km):</label>
+    <input type="number" id="weatherInterval" value="5" class="p-2 border rounded">
+    <label for="avgSpeed" class="ml-4 mr-2">Average Speed (km/h):</label>
+    <input type="number" id="avgSpeed" value="20" class="p-2 border rounded">
+  </section>
+  
+  <!-- GPX Upload -->
+  <section class="upload-section p-6 max-w-3xl mx-auto">
+    <h2 class="text-2xl font-bold mb-4">Upload GPX File</h2>
+    <form id="uploadForm">
+      <label for="fileInput" class="mr-2">Select GPX file:</label>
+      <input type="file" id="fileInput" accept=".gpx" class="p-2 border rounded">
+      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-4">Upload</button>
+    </form>
+  </section>
+  
+  <!-- Forecast Controls -->
+  <section class="forecast-controls text-center p-6">
+    <button id="saveForecast" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+      Save Forecast
+    </button>
+  </section>
+  
+  <!-- Map Container -->
+  <section id="map-container" class="relative h-96 max-w-5xl mx-auto my-6 rounded overflow-hidden shadow-lg">
+    <div id="map" class="w-full h-full"></div>
+    <button id="centerMap" class="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+      Center Map
+    </button>
+    <div id="loading" class="absolute top-4 left-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded hidden">
+      Loading...
+    </div>
+  </section>
+  
+  <!-- Charts Section -->
+  <section class="charts grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 max-w-screen-xl mx-auto">
+    <div class="chart-wrapper">
+      <canvas id="tempChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="precipChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="windChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="humidityChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="pressureChart"></canvas>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="elevationChart"></canvas>
+    </div>
+  </section>
+  
+  <!-- Timeline -->
+  <section id="timeline" class="p-6 bg-gray-100 dark:bg-gray-700 rounded mx-auto max-w-screen-xl overflow-x-auto whitespace-nowrap">
+  </section>
+  
+  <!-- Alerts -->
+  <section id="alerts" class="fixed top-4 right-4 z-50"></section>
+  
+  <!-- Set default start time -->
+  <script>
+    const startTimeInput = document.getElementById('startTime');
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    tomorrow.setHours(8, 0, 0, 0);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
+    const hh = String(tomorrow.getHours()).padStart(2, '0');
+    const min = String(tomorrow.getMinutes()).padStart(2, '0');
+    startTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  </script>
+  
+  <!-- External Libraries -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- GSAP for animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
