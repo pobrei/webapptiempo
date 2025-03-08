@@ -1,14 +1,28 @@
 (() => {
   'use strict';
 
-  // ----------------- Utility: Convert Degrees to Compass Direction -----------------
+  ///////////////////////////////////////////////
+  // STAGE 2, PART 2: WEATHER ALERT THRESHOLDS
+  ///////////////////////////////////////////////
+  const THRESHOLDS = {
+    windSpeed: 10, // m/s
+    tempHigh: 35,  // °C
+    tempLow: 0,    // °C
+    rain: 5        // mm in 3h
+  };
+
+  ///////////////////////////////////////////////
+  // Utility: Convert Degrees to Compass Direction
+  ///////////////////////////////////////////////
   const convertDegreesToCompass = (deg) => {
     const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
     const index = Math.round(deg / 45) % 8;
     return directions[index];
   };
 
-  // ----------------- Enhanced: Create Custom SVG Icon with Gradient & Drop Shadow -----------------
+  ///////////////////////////////////////////////
+  // Create Custom SVG Icon (for wind direction)
+  ///////////////////////////////////////////////
   const createSvgIcon = (degree) => {
     const svg = `<svg width="20" height="30" viewBox="0 0 20 30" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -39,7 +53,9 @@
     });
   };
 
-  // ----------------- UI Helper Functions -----------------
+  ///////////////////////////////////////////////
+  // UI Helper Functions
+  ///////////////////////////////////////////////
   const showLoading = () => document.getElementById('loading').classList.add('active');
   const hideLoading = () => document.getElementById('loading').classList.remove('active');
   const showError = (message, type = 'error') => {
@@ -52,7 +68,9 @@
     setTimeout(() => alert.remove(), 5000);
   };
 
-  // ----------------- Global Application State -----------------
+  ///////////////////////////////////////////////
+  // Global Application State
+  ///////////////////////////////////////////////
   let routeLayer = null;
   let weatherMarkers = [];
   let arrowMarkers = [];
@@ -74,7 +92,9 @@
     Ash: '🌋', Squall: '🌬️', Tornado: '🌪️'
   };
 
-  // ----------------- Initialize Map -----------------
+  ///////////////////////////////////////////////
+  // Initialize Map
+  ///////////////////////////////////////////////
   const map = L.map('map').setView([41.3851, 2.1734], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   setTimeout(() => map.invalidateSize(), 100);
@@ -87,10 +107,12 @@
     }
   });
 
-  // ----------------- Common Chart Options (Improved Readability) -----------------
+  ///////////////////////////////////////////////
+  // Chart Options (Detailed Tooltips)
+  ///////////////////////////////////////////////
   const commonChartOptions = {
     responsive: true,
-    maintainAspectRatio: false, // let charts grow vertically
+    maintainAspectRatio: false,
     layout: {
       padding: {
         top: 20,
@@ -120,7 +142,28 @@
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleFont: { size: 16 },
         bodyFont: { size: 14 },
-        cornerRadius: 4
+        cornerRadius: 4,
+        // This callback references weatherTasks[index] for separate charts,
+        // but we'll override it for the Elevation chart.
+        callbacks: {
+          label: (context) => {
+            const index = context.dataIndex;
+            const task = weatherTasks[index];
+            if (!task || !task.weather) return "No Data";
+
+            const temp = task.weather.temp ? `${Math.round(task.weather.temp)}°C` : "N/A";
+            const wind = task.weather.windSpeed ? `${Math.round(task.weather.windSpeed)} m/s` : "N/A";
+            const rain = task.weather.rain ? `${task.weather.rain.toFixed(1)} mm` : "0.0 mm";
+            const pressure = task.weather.pressure ? `${task.weather.pressure} hPa` : "N/A";
+
+            return [
+              `🌡️ Temp: ${temp}`,
+              `💨 Wind: ${wind}`,
+              `🌧️ Rain: ${rain}`,
+              `🔵 Pressure: ${pressure}`
+            ];
+          }
+        }
       }
     },
     scales: {
@@ -192,10 +235,39 @@
     }
   };
 
-  // ----------------- Timeline Functions (with GSAP Animations) -----------------
+  ///////////////////////////////////////////////
+  // Stage 2, Part 2: Check Alerts
+  ///////////////////////////////////////////////
+  function checkAlerts(task) {
+    const alerts = [];
+    if (!task.weather) return alerts;
+
+    const { windSpeed, temp, rain } = task.weather;
+
+    if (windSpeed > THRESHOLDS.windSpeed) {
+      alerts.push("High Wind");
+    }
+    if (temp > THRESHOLDS.tempHigh) {
+      alerts.push("Extreme Heat");
+    }
+    if (temp < THRESHOLDS.tempLow) {
+      alerts.push("Freezing Temperatures");
+    }
+    if (rain > THRESHOLDS.rain) {
+      alerts.push("Heavy Rainfall");
+    }
+
+    return alerts;
+  }
+
+  ///////////////////////////////////////////////
+  // Timeline (GSAP Animations + Alerts)
+  ///////////////////////////////////////////////
+  let timelineContainer;
+
   const updateTimeline = () => {
     timelineEntries = [];
-    const timelineContainer = document.getElementById('timeline');
+    timelineContainer = document.getElementById('timeline');
     timelineContainer.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
@@ -208,8 +280,20 @@
           ${WEATHER_ICONS[task.weather?.weather[0]?.main || 'Unknown'] || '❓'}
           <span>${task.weather?.weather[0]?.description || 'No data'}</span>
         </div>
-        <div class="timeline-temp">${task.weather ? `${Math.round(task.weather.temp)}°C` : 'N/A'}</div>
+        <div class="timeline-temp">
+          ${task.weather ? `${Math.round(task.weather.temp)}°C` : 'N/A'}
+        </div>
       `;
+
+      // If we have alerts, show them
+      if (task.alerts && task.alerts.length > 0) {
+        const alertsDiv = document.createElement('div');
+        alertsDiv.className = 'timeline-alerts';
+        alertsDiv.style.color = 'red';
+        alertsDiv.style.fontWeight = 'bold';
+        alertsDiv.textContent = `Alerts: ${task.alerts.join(', ')}`;
+        entry.appendChild(alertsDiv);
+      }
 
       // GSAP hover animation
       entry.addEventListener('mouseover', () => {
@@ -219,11 +303,11 @@
         gsap.to(entry, { scale: 1, duration: 0.2 });
       });
 
-      // Center map & open popup on click
+      // On click, center map & open popup
       entry.addEventListener('click', () => {
         if (weatherTasks[index]?.position) {
-          map.setView(weatherTasks[index].position, 13, { animate: true });
-          if (weatherTasks[index].marker) weatherTasks[index].marker.openPopup();
+          map.setView(task.position, 13, { animate: true });
+          if (task.marker) task.marker.openPopup();
         }
       });
 
@@ -252,7 +336,9 @@
     }
   };
 
-  // ----------------- Utility Functions -----------------
+  ///////////////////////////////////////////////
+  // Utility Functions
+  ///////////////////////////////////////////////
   const calculateDistance = (coord1, coord2) => {
     const R = 6371e3; // Earth radius in meters
     const φ1 = coord1[0] * Math.PI / 180;
@@ -280,7 +366,25 @@
     ];
   };
 
-  const computeElevationProfile = (points) => {
+  ///////////////////////////////////////////////
+  // Stage 2, Part 1: Elevation Gain/Loss
+  ///////////////////////////////////////////////
+  function calculateElevationGainLoss(elevationProfile) {
+    let totalGain = 0;
+    let totalLoss = 0;
+
+    for (let i = 1; i < elevationProfile.length; i++) {
+      const diff = elevationProfile[i].elevation - elevationProfile[i - 1].elevation;
+      if (diff > 0) totalGain += diff;
+      else totalLoss += Math.abs(diff);
+    }
+    return {
+      totalGain: Math.round(totalGain),
+      totalLoss: Math.round(totalLoss)
+    };
+  }
+
+  function computeElevationProfile(points) {
     const distances = [0];
     let cumulative = 0;
     for (let i = 1; i < points.length; i++) {
@@ -292,16 +396,27 @@
       distance: (distances[i] / 1000).toFixed(1),
       elevation: pt.ele
     })).filter(pt => pt.elevation !== null);
-  };
+  }
 
-  const createPopupContent = (task) => {
+  ///////////////////////////////////////////////
+  // Create Popup Content (Includes Alerts)
+  ///////////////////////////////////////////////
+  function createPopupContent(task) {
     const weather = task.weather;
     const iconCode = weather?.weather[0]?.main || 'Unknown';
     const icon = WEATHER_ICONS[iconCode] || '❓';
-
     let windDir = "N/A";
     if (weather && typeof weather.windDeg === 'number') {
       windDir = convertDegreesToCompass(weather.windDeg);
+    }
+
+    let alertsHTML = '';
+    if (task.alerts && task.alerts.length > 0) {
+      alertsHTML = `
+        <div class="alerts" style="color:red; font-weight:bold;">
+          Alerts: ${task.alerts.join(', ')}
+        </div>
+      `;
     }
 
     return `
@@ -315,11 +430,14 @@
           <div>Rain: ${weather ? weather.rain.toFixed(1) : '0.0'} mm</div>
           <div>Pressure: ${weather ? weather.pressure : 'N/A'} hPa</div>
         </div>
+        ${alertsHTML}
       </div>
     `;
-  };
+  }
 
-  // ----------------- Clear Existing Forecast Data -----------------
+  ///////////////////////////////////////////////
+  // Clear Existing Forecast Data
+  ///////////////////////////////////////////////
   const clearForecastData = () => {
     clearMarkers();
     arrowMarkers.forEach(marker => map.removeLayer(marker));
@@ -331,6 +449,9 @@
       .forEach(chart => { if (chart) chart.destroy(); });
 
     document.getElementById('timeline').innerHTML = '';
+    // Clear elevation stats from UI
+    const statsDiv = document.getElementById('elevationStats');
+    if (statsDiv) statsDiv.textContent = '';
   };
 
   const clearMarkers = () => {
@@ -338,8 +459,10 @@
     weatherMarkers = [];
   };
 
-  // ----------------- GPX File Parsing -----------------
-  const parseGPX = (gpxData) => {
+  ///////////////////////////////////////////////
+  // GPX File Parsing
+  ///////////////////////////////////////////////
+  function parseGPX(gpxData) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(gpxData, "text/xml");
     if (xmlDoc.getElementsByTagName("parsererror").length > 0)
@@ -356,20 +479,24 @@
       if (eleElem) ele = parseFloat(eleElem.textContent);
       return { lat, lon, ele };
     });
-  };
+  }
 
-  // ----------------- Render Route on Map -----------------
-  const renderRoute = (coords) => {
+  ///////////////////////////////////////////////
+  // Render Route on Map
+  ///////////////////////////////////////////////
+  function renderRoute(coords) {
     if (routeLayer) {
       map.removeLayer(routeLayer);
       routeLayer = null;
     }
     routeLayer = L.polyline(coords, { color: "#2196F3" }).addTo(map);
     map.fitBounds(routeLayer.getBounds());
-  };
+  }
 
-  // ----------------- Prepare Weather Tasks -----------------
-  const prepareWeatherTasks = async (coords) => {
+  ///////////////////////////////////////////////
+  // Prepare Weather Tasks
+  ///////////////////////////////////////////////
+  async function prepareWeatherTasks(coords) {
     const totalDistance = calculateTotalDistance(coords);
     const startTime = new Date(document.getElementById("startTime").value);
 
@@ -384,7 +511,6 @@
     // We only get up to 5 days of forecast
     const maxForecastTime = new Date(startTime.getTime() + 5 * 24 * 3600 * 1000);
 
-    // Create tasks at each interval along the route
     const tasks = Array.from({ length: Math.ceil(totalDistance / interval) }, (_, i) => {
       const distance = i * interval;
       const fraction = Math.min(distance / totalDistance, 1);
@@ -398,10 +524,12 @@
       throw new Error("No forecast times available within the 5-day limit. Adjust your route or parameters.");
     }
     return tasks;
-  };
+  }
 
-  // ----------------- Weather API Functions -----------------
-  const fetchWeatherData = async () => {
+  ///////////////////////////////////////////////
+  // Weather API Functions
+  ///////////////////////////////////////////////
+  async function fetchWeatherData() {
     const requests = weatherTasks.map(task =>
       fetchWeatherWithRetry(task.position[0], task.position[1], task.forecastTime)
     );
@@ -412,10 +540,12 @@
       if (!weatherTasks[index].weather) {
         showError(`Failed to get weather for point ${index + 1}`, 'warning');
       }
+      // Stage 2, Part 2: Check for alerts
+      weatherTasks[index].alerts = checkAlerts(weatherTasks[index]);
     });
-  };
+  }
 
-  const fetchWeatherWithRetry = async (lat, lon, time, retries = 2) => {
+  async function fetchWeatherWithRetry(lat, lon, time, retries = 2) {
     try {
       return await cachedWeatherFetch(lat, lon, time);
     } catch (error) {
@@ -425,9 +555,9 @@
       }
       throw error;
     }
-  };
+  }
 
-  const cachedWeatherFetch = async (lat, lon, time) => {
+  async function cachedWeatherFetch(lat, lon, time) {
     const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)},${time.getHours()}h`;
     if (weatherCache.has(cacheKey)) return weatherCache.get(cacheKey);
 
@@ -439,9 +569,9 @@
       console.error("Weather fetch error:", error);
       return null;
     }
-  };
+  }
 
-  const fetchWeather = async (lat, lon, time) => {
+  async function fetchWeather(lat, lon, time) {
     const now = new Date();
     if (time > new Date(now.getTime() + 5 * 24 * 3600 * 1000))
       throw new Error("Forecast time exceeds 5-day limit");
@@ -485,44 +615,53 @@
       console.error("Fetch error:", error);
       throw error;
     }
-  };
+  }
 
-  // ----------------- Charts Rendering -----------------
+  ///////////////////////////////////////////////
+  // Charts Rendering
+  ///////////////////////////////////////////////
+  /**
+   * Helper to do ratio-based interpolation for both temp and feels_like
+   * if you need it in multiple charts. For the main temperature chart,
+   * we still rely on weatherTasks. For the elevation chart, we do
+   * custom logic below. 
+   * If needed, you can unify these approaches.
+   */
 
-  // 1) Elevation/Temperature Chart
-  const renderElevationChart = () => {
+  function renderElevationChart() {
     if (!elevationProfile.length || !weatherTasks.length) return;
+
     const ctx = document.getElementById('elevationChart').getContext('2d');
 
-    // Helper to interpolate temperature at a given distance
-    const interpolateTemperature = (distanceMeters) => {
-      let i = 0;
-      for (; i < weatherTasks.length - 1; i++) {
-        if (weatherTasks[i].distance <= distanceMeters && weatherTasks[i + 1].distance >= distanceMeters) {
-          break;
-        }
+    // We assume you already built "temperatureDataset" and "feelsLikeDataset"
+    // by interpolating or by directly referencing arrays. 
+    // From previous code, you might do something like:
+    // 
+    // 1) Create a function to get interpolated weather for each elevation point
+    // 2) Fill arrays. But let's assume you've done it if you followed the previous code.
+    // 
+    // We'll show a direct approach for clarity:
+    const temperatureDataset = [];
+    const feelsLikeDataset = [];
+
+    // We'll do a quick approach: If you want to fully handle out-of-bounds,
+    // you can do ratio-based interpolation. Or if you just want to match
+    // indexes, you can do a simpler approach. 
+    // This snippet assumes you have an "interpolateWeather" approach from earlier.
+    // Otherwise, we can set them to null if out-of-range.
+
+    for (let i = 0; i < elevationProfile.length; i++) {
+      const distMeters = parseFloat(elevationProfile[i].distance) * 1000;
+      // find nearest weatherTask
+      const w = getInterpolatedWeather(distMeters);
+      if (w) {
+        temperatureDataset.push(w.temp);
+        feelsLikeDataset.push(w.feels_like);
+      } else {
+        temperatureDataset.push(null);
+        feelsLikeDataset.push(null);
       }
-      if (i === weatherTasks.length - 1) {
-        return weatherTasks[i].weather ? weatherTasks[i].weather.temp : null;
-      }
-      const task1 = weatherTasks[i];
-      const task2 = weatherTasks[i + 1];
-      if (!task1.weather || !task2.weather) return null;
-
-      const t1 = task1.weather.temp;
-      const t2 = task2.weather.temp;
-      const d1 = task1.distance;
-      const d2 = task2.distance;
-      const ratio = (distanceMeters - d1) / (d2 - d1);
-
-      return t1 + (t2 - t1) * ratio;
-    };
-
-    // Build temperature dataset by interpolating each elevation point
-    const temperatureDataset = elevationProfile.map(pt => {
-      const distanceMeters = parseFloat(pt.distance) * 1000;
-      return interpolateTemperature(distanceMeters);
-    });
+    }
 
     elevationChart = new Chart(ctx, {
       type: 'line',
@@ -544,11 +683,34 @@
             tension: 0.3,
             fill: false,
             yAxisID: 'y1'
+          },
+          {
+            label: "Feels Like (°C)",
+            data: feelsLikeDataset,
+            borderColor: "#ffa500",
+            tension: 0.3,
+            fill: false,
+            yAxisID: 'y1'
           }
         ]
       },
       options: {
         ...commonChartOptions,
+        // Override the default tooltip callback for this chart only:
+        plugins: {
+          ...commonChartOptions.plugins,
+          tooltip: {
+            ...commonChartOptions.plugins.tooltip,
+            callbacks: {
+              label: (context) => {
+                // For this chart, we want the actual data from the dataset
+                const dsLabel = context.dataset.label || '';
+                const val = context.parsed.y !== null ? context.parsed.y.toFixed(1) : 'No Data';
+                return `${dsLabel}: ${val}`;
+              }
+            }
+          }
+        },
         scales: {
           ...commonChartOptions.scales,
           x: {
@@ -585,31 +747,112 @@
         }
       }
     });
-  };
+  }
 
-  // 2) Temperature Chart
-  const renderTemperatureChart = () => {
+  /**
+   * Example "getInterpolatedWeather" for the elevation chart
+   * If distance is outside the range of weatherTasks, use the first or last.
+   */
+  function getInterpolatedWeather(distMeters) {
+    if (!weatherTasks.length) return null;
+    const lastIndex = weatherTasks.length - 1;
+
+    // If dist is beyond the last
+    if (distMeters >= weatherTasks[lastIndex].distance) {
+      return weatherTasks[lastIndex].weather
+        ? { temp: weatherTasks[lastIndex].weather.temp, feels_like: weatherTasks[lastIndex].weather.feels_like }
+        : null;
+    }
+
+    // If dist is before the first
+    if (distMeters <= weatherTasks[0].distance) {
+      return weatherTasks[0].weather
+        ? { temp: weatherTasks[0].weather.temp, feels_like: weatherTasks[0].weather.feels_like }
+        : null;
+    }
+
+    // Otherwise, find tasks i, i+1
+    let i = 0;
+    for (; i < weatherTasks.length - 1; i++) {
+      if (weatherTasks[i].distance <= distMeters && weatherTasks[i + 1].distance >= distMeters) {
+        break;
+      }
+    }
+    const w1 = weatherTasks[i].weather;
+    const w2 = weatherTasks[i + 1].weather;
+    if (!w1 || !w2) return null;
+
+    const d1 = weatherTasks[i].distance;
+    const d2 = weatherTasks[i + 1].distance;
+    const ratio = (distMeters - d1) / (d2 - d1);
+    const temp = w1.temp + (w2.temp - w1.temp) * ratio;
+    const feels_like = w1.feels_like + (w2.feels_like - w1.feels_like) * ratio;
+
+    return { temp, feels_like };
+  }
+
+  function renderTemperatureChart() {
+    if (!weatherTasks.length) return;
+  
     const ctx = document.getElementById('tempChart').getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(255,99,132,0.5)');
-    gradient.addColorStop(1, 'rgba(255,99,132,0)');
-
+  
+    // Create gradients if you like a filled area under each line
+    const tempGradient = ctx.createLinearGradient(0, 0, 0, 400);
+    tempGradient.addColorStop(0, 'rgba(255, 99, 132, 0.5)'); // pinkish
+    tempGradient.addColorStop(1, 'rgba(255, 99, 132, 0)');
+  
+    const feelsGradient = ctx.createLinearGradient(0, 0, 0, 400);
+    feelsGradient.addColorStop(0, 'rgba(255,165,0,0.5)'); // orange
+    feelsGradient.addColorStop(1, 'rgba(255,165,0,0)');
+  
+    // Build data arrays for Temperature and Feels Like
+    const distanceLabels = weatherTasks.map(t => `${(t.distance / 1000).toFixed(1)} km`);
+    const tempData = weatherTasks.map(t => t.weather?.temp ?? null);
+    const feelsLikeData = weatherTasks.map(t => t.weather?.feels_like ?? null);
+  
     tempChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: weatherTasks.map(t => `${(t.distance / 1000).toFixed(1)} km`),
+        labels: distanceLabels,
         datasets: [
           {
             label: "Temperature (°C)",
-            data: weatherTasks.map(t => t.weather?.temp ?? null),
-            backgroundColor: gradient,
+            data: tempData,
+            backgroundColor: tempGradient,
             borderColor: '#ff6384',
-            fill: true
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: "Feels Like (°C)",
+            data: feelsLikeData,
+            backgroundColor: feelsGradient,
+            borderColor: '#ffa500',
+            fill: true,
+            tension: 0.3
           }
         ]
       },
       options: {
+        // Reuse your existing `commonChartOptions` but override the tooltip callback
         ...commonChartOptions,
+        plugins: {
+          ...commonChartOptions.plugins,
+          tooltip: {
+            ...commonChartOptions.plugins.tooltip,
+            callbacks: {
+              // This callback ensures we ONLY show each dataset's numeric value,
+              // no wind/rain/pressure lines from `weatherTasks`.
+              label: (context) => {
+                const dsLabel = context.dataset.label || '';
+                // The numeric value from the dataset at this index
+                const val = context.parsed.y;
+                if (val === null) return `${dsLabel}: No Data`;
+                return `${dsLabel}: ${val.toFixed(1)}`;
+              }
+            }
+          }
+        },
         scales: {
           ...commonChartOptions.scales,
           y: {
@@ -622,10 +865,9 @@
         }
       }
     });
-  };
+  }
 
-  // 3) Precipitation Chart
-  const renderPrecipitationChart = () => {
+  function renderPrecipitationChart() {
     const ctx = document.getElementById('precipChart').getContext('2d');
     precipChart = new Chart(ctx, {
       type: 'bar',
@@ -658,10 +900,9 @@
         }
       }
     });
-  };
+  }
 
-  // 4) Wind Chart
-  const renderWindChart = () => {
+  function renderWindChart() {
     const ctx = document.getElementById('windChart').getContext('2d');
     windChart = new Chart(ctx, {
       type: 'line',
@@ -703,10 +944,9 @@
         }
       }
     });
-  };
+  }
 
-  // 5) Humidity Chart
-  const renderHumidityChart = () => {
+  function renderHumidityChart() {
     const ctx = document.getElementById('humidityChart').getContext('2d');
     humidityChart = new Chart(ctx, {
       type: 'line',
@@ -743,10 +983,9 @@
         }
       }
     });
-  };
+  }
 
-  // 6) Pressure Chart
-  const renderPressureChart = () => {
+  function renderPressureChart() {
     const ctx = document.getElementById('pressureChart').getContext('2d');
     pressureChart = new Chart(ctx, {
       type: 'line',
@@ -781,67 +1020,108 @@
         }
       }
     });
-  };
+  }
 
-  // ----------------- Forecast Saving Function (PDF) -----------------
-  const saveForecast = () => {
+  ///////////////////////////////////////////////
+  // Enhanced PDF Export
+  ///////////////////////////////////////////////
+  const saveForecast = async () => {
     if (!weatherTasks.length) {
       showError("No forecast data available to save.");
       return;
     }
+
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Forecast Data", 10, 20);
+    const doc = new jsPDF("p", "mm", "a4");
+    doc.setFontSize(18);
+    doc.text("RideWeather Planner - Forecast Report", 10, 15);
+
+    let y = 25;
+
+    // Capture Route Summary
+    const totalDistance = (calculateTotalDistance(currentRouteCoords) / 1000).toFixed(1);
     doc.setFontSize(12);
+    doc.text(`Total Distance: ${totalDistance} km`, 10, y);
+    y += 6;
+    
+    // If we have elevationProfile, compute total gain/loss
+    if (elevationProfile && elevationProfile.length > 1) {
+      const { totalGain, totalLoss } = calculateElevationGainLoss(elevationProfile);
+      doc.text(`Total Elevation Gain: ${totalGain} m`, 10, y);
+      y += 6;
+      doc.text(`Total Elevation Loss: ${totalLoss} m`, 10, y);
+      y += 6;
+    }
 
-    let y = 30;
+    doc.text(`Weather Forecast for ${weatherTasks.length} points along the route:`, 10, y);
+    y += 10;
+
+    // Capture Weather + Alerts
     weatherTasks.forEach((task, i) => {
-      const time = task.forecastTime.toLocaleString();
+      const time = task.forecastTime.toLocaleTimeString();
       const pos = `(${task.position[0].toFixed(4)}, ${task.position[1].toFixed(4)})`;
-
-      let windDir = "N/A";
-      if (task.weather && typeof task.weather.windDeg === 'number') {
-        windDir = convertDegreesToCompass(task.weather.windDeg);
-      }
-
       const temp = task.weather ? `${Math.round(task.weather.temp)}°C` : "N/A";
-      const feelsLike = task.weather ? `${Math.round(task.weather.feels_like)}°C` : "N/A";
-      const windSpeed = task.weather ? `${Math.round(task.weather.windSpeed)} m/s` : "N/A";
-      const rain = task.weather ? `${task.weather.rain.toFixed(1)} mm` : "N/A";
+      const wind = task.weather ? `${Math.round(task.weather.windSpeed)} m/s` : "N/A";
+      const rain = task.weather ? `${task.weather.rain.toFixed(1)} mm` : "0.0 mm";
       const pressure = task.weather ? `${task.weather.pressure} hPa` : "N/A";
 
-      const line = `Point ${i+1}:
-Time: ${time}
-Position: ${pos}
-Temp: ${temp} (Feels: ${feelsLike})
-Wind: ${windSpeed} (${windDir})
-Rain: ${rain} | Pressure: ${pressure}
------------------------------------`;
+      doc.text(`${i + 1}) ${time} | Pos: ${pos} | Temp: ${temp} | Wind: ${wind} | Rain: ${rain} | Pressure: ${pressure}`, 10, y);
+      y += 6;
 
-      const splitText = doc.splitTextToSize(line, 180);
-      doc.text(splitText, 10, y);
-      y += splitText.length * 7;
+      // If there's an alert for this point
+      if (task.alerts && task.alerts.length > 0) {
+        doc.setTextColor(255, 0, 0); // red text
+        doc.text(`Alerts: ${task.alerts.join(', ')}`, 10, y);
+        doc.setTextColor(0, 0, 0);   // reset text color
+        y += 6;
+      }
 
-      if (y > 280) {
+      if (y > 270) {
         doc.addPage();
         y = 20;
       }
     });
+
+    // Capture Map Snapshot
+    const mapCanvas = document.querySelector("#map canvas");
+    if (mapCanvas) {
+      const mapImg = mapCanvas.toDataURL("image/png");
+      doc.addPage();
+      doc.setFontSize(16);
+      doc.text("Route Map", 10, 20);
+      doc.addImage(mapImg, "PNG", 10, 30, 180, 100);
+    }
+
+    // Capture Weather Charts
+    const chartIds = ["tempChart", "precipChart", "windChart", "humidityChart", "pressureChart", "elevationChart"];
+    for (const id of chartIds) {
+      const chartCanvas = document.getElementById(id);
+      if (chartCanvas) {
+        const imgData = chartCanvas.toDataURL("image/png");
+        doc.addPage();
+        doc.setFontSize(16);
+        doc.text(id.replace("Chart", "") + " Chart", 10, 20);
+        doc.addImage(imgData, "PNG", 10, 30, 180, 100);
+      }
+    }
 
     doc.save("forecast.pdf");
   };
 
   document.getElementById('saveForecast').addEventListener('click', saveForecast);
 
-  // ----------------- Update Forecast on Start Time Change -----------------
+  ///////////////////////////////////////////////
+  // Update Forecast on Start Time Change
+  ///////////////////////////////////////////////
   document.getElementById('startTime').addEventListener('change', async () => {
     if (currentRouteCoords) {
       await updateForecast();
     }
   });
 
-  // ----------------- Main Forecast Update Function -----------------
+  ///////////////////////////////////////////////
+  // Main Forecast Update Function
+  ///////////////////////////////////////////////
   const updateForecast = async () => {
     clearForecastData();
     try {
@@ -857,9 +1137,16 @@ Rain: ${rain} | Pressure: ${pressure}
       renderHumidityChart();
       renderPressureChart();
 
-      // Render elevation/temperature combo if we have elevation data
+      // If the GPX had elevation data, build the combined elevation/temperature chart
       if (currentRoutePoints && currentRoutePoints[0].ele !== undefined) {
         elevationProfile = computeElevationProfile(currentRoutePoints);
+
+        const { totalGain, totalLoss } = calculateElevationGainLoss(elevationProfile);
+        const statsDiv = document.getElementById('elevationStats');
+        if (statsDiv) {
+          statsDiv.textContent = `Total Elevation Gain: ${totalGain} m | Total Elevation Loss: ${totalLoss} m`;
+        }
+
         renderElevationChart();
       }
     } catch (error) {
@@ -867,7 +1154,9 @@ Rain: ${rain} | Pressure: ${pressure}
     }
   };
 
-  // ----------------- File Upload Handling -----------------
+  ///////////////////////////////////////////////
+  // File Upload Handling
+  ///////////////////////////////////////////////
   document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     clearExistingData();
@@ -909,6 +1198,13 @@ Rain: ${rain} | Pressure: ${pressure}
       // If the GPX had elevation data, build the combined elevation/temperature chart
       if (routePoints[0].ele !== undefined) {
         elevationProfile = computeElevationProfile(routePoints);
+
+        const { totalGain, totalLoss } = calculateElevationGainLoss(elevationProfile);
+        const statsDiv = document.getElementById('elevationStats');
+        if (statsDiv) {
+          statsDiv.textContent = `Total Elevation Gain: ${totalGain} m | Total Elevation Loss: ${totalLoss} m`;
+        }
+
         renderElevationChart();
       }
     } catch (error) {
@@ -918,7 +1214,9 @@ Rain: ${rain} | Pressure: ${pressure}
     }
   });
 
-  // ----------------- Clear Existing Data (Route and Forecast) -----------------
+  ///////////////////////////////////////////////
+  // Clear Existing Data
+  ///////////////////////////////////////////////
   const clearExistingData = () => {
     if (routeLayer) {
       map.removeLayer(routeLayer);
@@ -927,12 +1225,14 @@ Rain: ${rain} | Pressure: ${pressure}
     clearForecastData();
   };
 
-  // ----------------- Map Marker Rendering (Using Enhanced SVG Icons) -----------------
+  ///////////////////////////////////////////////
+  // Map Marker Rendering
+  ///////////////////////////////////////////////
   const renderMapMarkers = () => {
     weatherTasks.forEach((task, index) => {
       if (!task.weather) return;
 
-      // Basic circle marker for the forecast point
+      // Basic marker for the forecast point
       const marker = L.marker(task.position)
         .bindPopup(createPopupContent(task))
         .bindTooltip(`#${index + 1}: ${Math.round(task.weather.temp)}°C`)
@@ -953,5 +1253,50 @@ Rain: ${rain} | Pressure: ${pressure}
       arrowMarkers.push(arrowMarker);
     });
   };
+
+  ///////////////////////////////////////////////
+  // Stage 3, Step 3: Customizable Dashboard (Toggling Charts)
+  ///////////////////////////////////////////////
+  // 1) Listen for changes on each chart-toggle checkbox
+  document.querySelectorAll('.chart-toggle').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+      const chartId = e.target.dataset.chart;
+      toggleChartVisibility(chartId, e.target.checked);
+
+      // Optional: Save preference in localStorage
+      localStorage.setItem(`chartToggle_${chartId}`, e.target.checked);
+    });
+  });
+
+  // 2) This function shows/hides the corresponding chart wrapper
+  function toggleChartVisibility(chartId, isVisible) {
+    const wrapper = document.getElementById(chartId)?.closest('.chart-wrapper');
+    if (!wrapper) return;
+    wrapper.style.display = isVisible ? 'block' : 'none';
+  }
+
+  // 3) On page load, restore user preferences from localStorage
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.chart-toggle').forEach(checkbox => {
+      const storedValue = localStorage.getItem(`chartToggle_${checkbox.dataset.chart}`);
+      if (storedValue === 'false') {
+        checkbox.checked = false;
+        toggleChartVisibility(checkbox.dataset.chart, false);
+      }
+    });
+  });
+
+  ///////////////////////////////////////////////
+  // STAGE 4 (Mobile-Friendliness) - Collapsible Panels
+  ///////////////////////////////////////////////
+  const toggleControlsBtn = document.getElementById('toggleControls');
+  if (toggleControlsBtn) {
+    toggleControlsBtn.addEventListener('click', () => {
+      const controlsContainer = document.getElementById('controlsContainer');
+      if (controlsContainer) {
+        controlsContainer.classList.toggle('hidden');
+      }
+    });
+  }
 
 })();

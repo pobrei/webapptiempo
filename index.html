@@ -7,41 +7,67 @@
   <link rel="stylesheet" href="css/style.css">
   <!-- Leaflet CSS for map rendering -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Tailwind CSS for rapid UI styling -->
+  <!-- Tailwind CSS for utility styling -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 text-center">
+<body class="bg-white text-gray-900">
+  <header class="bg-white border-b border-gray-200 p-6 text-center">
     <h1 class="text-3xl font-bold">RideWeather Planner</h1>
-    <p class="text-gray-600 dark:text-gray-300 mt-2">Plan your ride and check the weather along your route.</p>
+    <p class="text-gray-600 mt-2">Plan your ride and check the weather along your route.</p>
   </header>
 
-  <!-- Route Controls -->
-  <section class="route-controls p-6 max-w-3xl mx-auto">
-    <label for="startTime" class="mr-2">Start Time:</label>
-    <input type="datetime-local" id="startTime" class="p-2 border rounded">
-    <label for="weatherInterval" class="ml-4 mr-2">Weather Interval (km):</label>
-    <input type="number" id="weatherInterval" value="5" class="p-2 border rounded">
-    <label for="avgSpeed" class="ml-4 mr-2">Average Speed (km/h):</label>
-    <input type="number" id="avgSpeed" value="20" class="p-2 border rounded">
-  </section>
+  <!-- Toggle Button for Collapsible Panels -->
+  <button id="toggleControls" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded m-4">
+    Show/Hide Controls
+  </button>
+
+  <!-- Wrap all controls in a single container for collapsing -->
+  <div id="controlsContainer">
+    <!-- Route Controls -->
+    <section class="route-controls p-6 max-w-3xl mx-auto">
+      <label for="startTime" class="mr-2">Start Time:</label>
+      <input type="datetime-local" id="startTime" class="p-2 border rounded">
+      <label for="weatherInterval" class="ml-4 mr-2">Weather Interval (km):</label>
+      <input type="number" id="weatherInterval" value="5" class="p-2 border rounded">
+      <label for="avgSpeed" class="ml-4 mr-2">Average Speed (km/h):</label>
+      <input type="number" id="avgSpeed" value="20" class="p-2 border rounded">
+    </section>
+    
+    <!-- GPX Upload -->
+    <section class="upload-section p-6 max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold mb-4">Upload GPX File</h2>
+      <form id="uploadForm">
+        <label for="fileInput" class="mr-2">Select GPX file:</label>
+        <input type="file" id="fileInput" accept=".gpx" class="p-2 border rounded">
+        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-4">Upload</button>
+      </form>
+    </section>
+    
+    <!-- Forecast Controls -->
+    <section class="forecast-controls text-center p-6">
+      <button id="saveForecast" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+        Save Forecast
+      </button>
+    </section>
+
+    <!-- Chart Settings (Customizable Dashboard) -->
+    <section class="chart-settings text-center p-6 max-w-3xl mx-auto">
+      <h3 class="text-xl font-bold mb-2">Customize Dashboard</h3>
+      <div>
+        <label><input type="checkbox" class="chart-toggle" data-chart="tempChart" checked> Temperature</label>
+        <label><input type="checkbox" class="chart-toggle" data-chart="precipChart" checked> Precipitation</label>
+        <label><input type="checkbox" class="chart-toggle" data-chart="windChart" checked> Wind</label>
+        <label><input type="checkbox" class="chart-toggle" data-chart="humidityChart" checked> Humidity</label>
+        <label><input type="checkbox" class="chart-toggle" data-chart="pressureChart" checked> Pressure</label>
+        <label><input type="checkbox" class="chart-toggle" data-chart="elevationChart" checked> Elevation</label>
+      </div>
+    </section>
+  </div>
   
-  <!-- GPX Upload -->
-  <section class="upload-section p-6 max-w-3xl mx-auto">
-    <h2 class="text-2xl font-bold mb-4">Upload GPX File</h2>
-    <form id="uploadForm">
-      <label for="fileInput" class="mr-2">Select GPX file:</label>
-      <input type="file" id="fileInput" accept=".gpx" class="p-2 border rounded">
-      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-4">Upload</button>
-    </form>
-  </section>
-  
-  <!-- Forecast Controls -->
-  <section class="forecast-controls text-center p-6">
-    <button id="saveForecast" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-      Save Forecast
-    </button>
-  </section>
+  <!-- Elevation Stats (Stage 2, Part 1) -->
+  <div id="elevationStats" style="text-align:center; font-weight:bold; margin: 1rem;">
+    <!-- We'll fill this with JS after computing gain/loss -->
+  </div>
   
   <!-- Map Container -->
   <section id="map-container" class="relative h-96 max-w-5xl mx-auto my-6 rounded overflow-hidden shadow-lg">
@@ -49,7 +75,7 @@
     <button id="centerMap" class="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
       Center Map
     </button>
-    <div id="loading" class="absolute top-4 left-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded hidden">
+    <div id="loading" class="absolute top-4 left-4 bg-white text-gray-900 px-4 py-2 rounded hidden">
       Loading...
     </div>
   </section>
@@ -77,7 +103,7 @@
   </section>
   
   <!-- Timeline -->
-  <section id="timeline" class="p-6 bg-gray-100 dark:bg-gray-700 rounded mx-auto max-w-screen-xl overflow-x-auto whitespace-nowrap">
+  <section id="timeline" class="p-6 bg-gray-100 rounded mx-auto max-w-screen-xl overflow-x-auto whitespace-nowrap">
   </section>
   
   <!-- Alerts -->
