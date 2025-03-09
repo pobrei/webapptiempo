@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Tailwind or any other utility CSS if desired -->
+  <!-- Tailwind CSS (optional) -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body>
@@ -18,9 +18,7 @@
   </header>
 
   <!-- Toggle button to show/hide route/upload/forecast controls -->
-  <button id="toggleControls" class="toggle-controls-btn">
-    Toggle Controls
-  </button>
+  <button id="toggleControls" class="toggle-controls-btn">Toggle Controls</button>
 
   <!-- Collapsible container for route controls, upload, forecast -->
   <div id="controlsContainer" class="controls-container">
@@ -50,17 +48,25 @@
     </section>
   </div>
 
-  <!-- Elevation Stats (Stage 2, Part 1) -->
+  <!-- Elevation Stats -->
   <div id="elevationStats" class="elevation-stats"></div>
   
   <!-- Map Container -->
   <section id="map-container" class="map-container">
     <div id="map"></div>
-    <button id="centerMap" class="center-map-btn">Center Map</button>
+    <button id="centerMap" class="center-map-btn">
+      <!-- Inline SVG icon for crosshair -->
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="8" r="7" stroke="white" stroke-width="2" fill="none"/>
+        <line x1="8" y1="1" x2="8" y2="15" stroke="white" stroke-width="2"/>
+        <line x1="1" y1="8" x2="15" y2="8" stroke="white" stroke-width="2"/>
+      </svg>
+      Center Map
+    </button>
     <div id="loading" class="loading">Loading...</div>
   </section>
   
-  <!-- Charts Section in a "chart-grid" layout -->
+  <!-- Charts Section -->
   <section class="chart-grid">
     <div class="chart-card">
       <h2>Temperature</h2>
@@ -94,7 +100,7 @@
   <!-- Alerts -->
   <section id="alerts" class="alerts"></section>
   
-  <!-- Set default start time -->
+  <!-- Set default start time and current time -->
   <script>
     const startTimeInput = document.getElementById('startTime');
     const now = new Date();
@@ -107,7 +113,6 @@
     const min = String(tomorrow.getMinutes()).padStart(2, '0');
     startTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 
-    // Show current time in header (like Epic Ride Weather does)
     const currentTimeElem = document.getElementById('currentTime');
     if (currentTimeElem) {
       const nowString = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
@@ -119,7 +124,6 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- GSAP for animations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   
   <!-- App Scripts -->

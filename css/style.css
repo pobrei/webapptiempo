@@ -1,4 +1,4 @@
-/* style.css - Dark theme with larger, more responsive charts */
+/* style.css - Dark theme with enhanced UI/UX */
 
 /* Reset and global settings */
 * {
@@ -28,11 +28,13 @@ body {
   margin: 0;
   font-size: 2rem;
   color: #ffa500; /* accent color */
+  margin-bottom: 0.5rem; /* added spacing for readability */
 }
 .app-subtitle {
   margin: 0;
   font-size: 1rem;
   color: #aaaaaa;
+  opacity: 0.8; /* reduced brightness for hierarchy */
 }
 
 /* Toggle button for collapsible controls */
@@ -44,13 +46,25 @@ body {
   margin: 1rem;
   border-radius: 4px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.3s ease, transform 0.3s ease;
+  position: relative;
 }
 .toggle-controls-btn:hover {
   background: #666;
+  transform: scale(1.02);
+}
+.toggle-controls-btn::after {
+  content: '▼'; /* default downward arrow */
+  position: absolute;
+  right: 1rem;
+  transition: transform 0.3s ease;
+}
+/* Rotate arrow when controls are open */
+.toggle-controls-btn.open::after {
+  transform: rotate(180deg);
 }
 
-/* Collapsible container for route/upload/forecast controls */
+/* Collapsible container for controls with smooth slide effect */
 .controls-container {
   margin: 1rem auto;
   max-width: 800px;
@@ -58,6 +72,13 @@ body {
   background: #2c2c2e;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: max-height 0.5s ease, opacity 0.5s ease, padding 0.5s ease;
+  overflow: hidden;
+}
+.controls-container.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0 1rem;
 }
 
 /* Route controls, upload, forecast sections */
@@ -66,12 +87,12 @@ body {
 .forecast-controls {
   margin-bottom: 1rem;
 }
-
 .route-controls label,
 .upload-section label {
   margin-right: 0.5rem;
 }
 
+/* Form Inputs */
 input[type="datetime-local"],
 input[type="number"],
 input[type="file"] {
@@ -81,8 +102,16 @@ input[type="file"] {
   padding: 0.3rem 0.5rem;
   margin: 0.5rem 0;
   border-radius: 4px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+input[type="datetime-local"]:focus,
+input[type="number"]:focus,
+input[type="file"]:focus {
+  border-color: #ffa500;
+  box-shadow: 0 0 5px rgba(255,140,0,0.5);
 }
 
+/* Buttons */
 .upload-btn,
 .save-forecast-btn {
   background: #ff8c00;
@@ -92,10 +121,13 @@ input[type="file"] {
   margin-left: 0.5rem;
   border-radius: 4px;
   cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
 .upload-btn:hover,
 .save-forecast-btn:hover {
   background: #ffaa33;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 /* Elevation Stats */
@@ -104,6 +136,9 @@ input[type="file"] {
   font-weight: bold;
   margin: 1rem auto;
   color: #ffa500; /* highlight color */
+  padding: 0.5rem;
+  font-size: 1.2rem;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
 /* Map container */
@@ -131,14 +166,20 @@ input[type="file"] {
   border-radius: 6px;
   padding: 0.5rem 1rem;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.3s ease, transform 0.3s ease;
   z-index: 1001;
+  display: flex;
+  align-items: center;
 }
 .center-map-btn:hover {
   background: rgba(255,140,0,1);
+  transform: scale(1.02);
+}
+.center-map-btn svg {
+  margin-right: 0.5rem;
 }
 
-/* Loading overlay */
+/* Loading overlay with fade-in/out */
 #loading {
   position: absolute;
   top: 20px;
@@ -150,46 +191,52 @@ input[type="file"] {
   display: none;
   font-size: 1rem;
   z-index: 1001;
+  opacity: 0;
+  transition: opacity 0.5s ease;
 }
 #loading.active {
   display: block;
+  opacity: 1;
 }
 
 /* Chart Grid */
 .chart-grid {
   display: grid;
-  /* Each chart card at least 400–500px wide, but flexible */
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 1rem;
   max-width: 1600px;
   margin: 2rem auto;
+  padding: 0 1rem;
 }
 
-/* Chart Cards - reminiscent of Epic Ride Weather */
+/* Chart Cards */
 .chart-card {
   background: #2c2c2e;
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   border: 1px solid #3a3a3c;
+  transition: box-shadow 0.3s ease;
+}
+.chart-card:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
 }
 .chart-card h2 {
   margin-top: 0;
-  color: #ffa500; /* accent color for headings */
+  color: #ffa500;
   font-size: 1.2rem;
+  text-transform: uppercase;
+  font-weight: bold;
 }
-
-/* Let Chart.js handle aspect ratio, but ensure a min-height so they're not too small */
+/* Ensure charts remain legible */
 .chart-card canvas {
   width: 100% !important;
   height: auto !important;
-  min-height: 0px; /* base minimum height for decent readability */
+  min-height: 200px;
 }
-
-/* On very large screens, ensure the charts get taller */
 @media (min-width: 1400px) {
   .chart-card canvas {
-    min-height: 300px; /* bigger for wide displays */
+    min-height: 300px;
   }
 }
 
@@ -204,7 +251,6 @@ input[type="file"] {
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-
 .timeline-entry {
   display: inline-block;
   background: #3a3a3c;
@@ -224,11 +270,11 @@ input[type="file"] {
   background: #4a4a4c;
 }
 .timeline-entry.active {
-  border-color: #ff8c00;
-  background: #555;
+  border: 2px solid #ff8c00;
+  background: linear-gradient(45deg, #444, #555);
 }
 
-/* Alerts */
+/* Alerts with distinct icons and fade effect */
 .alerts {
   position: fixed;
   top: 1rem;
@@ -242,20 +288,23 @@ input[type="file"] {
   padding: 0.5rem 1rem;
   margin-bottom: 0.5rem;
   border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.5s ease;
 }
-.alert-item.warning {
-  background: #d97d00;
+.alert-item.show {
+  opacity: 1;
 }
-
-/* Hidden class for toggling controls container */
-.hidden {
-  display: none !important;
+.alert-item.warning::before {
+  content: "⚠️ ";
+}
+.alert-item.error::before {
+  content: "❗ ";
 }
 
 /* Responsive adjustments for smaller devices */
 @media (max-width: 768px) {
   .chart-grid {
-    grid-template-columns: 1fr;  /* single-column on small screens */
+    grid-template-columns: 1fr;
   }
   .toggle-controls-btn {
     margin-left: 1rem;
