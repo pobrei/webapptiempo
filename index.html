@@ -2,112 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>RideWeather Planner</title>
-  <!-- Custom Stylesheet -->
+  <title>Weather Planner</title>
+  <!-- Our custom CSS -->
   <link rel="stylesheet" href="css/style.css">
-  <!-- Leaflet CSS for map rendering -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Tailwind CSS for utility styling -->
+  <!-- Tailwind or any other utility CSS if desired -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-white text-gray-900">
-  <header class="bg-white border-b border-gray-200 p-6 text-center">
-    <h1 class="text-3xl font-bold">RideWeather Planner</h1>
-    <p class="text-gray-600 mt-2">Plan your ride and check the weather along your route.</p>
+<body>
+  <!-- Dark top bar / header -->
+  <header class="top-bar">
+    <h1 class="app-title">Weather Planner</h1>
+    <p class="app-subtitle" id="currentTime">Feb 17, 2025 at 09:16</p>
   </header>
 
-  <!-- Toggle Button for Collapsible Panels -->
-  <button id="toggleControls" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded m-4">
-    Show/Hide Controls
+  <!-- Toggle button to show/hide route/upload/forecast controls -->
+  <button id="toggleControls" class="toggle-controls-btn">
+    Toggle Controls
   </button>
 
-  <!-- Wrap all controls in a single container for collapsing -->
-  <div id="controlsContainer">
+  <!-- Collapsible container for route controls, upload, forecast -->
+  <div id="controlsContainer" class="controls-container">
     <!-- Route Controls -->
-    <section class="route-controls p-6 max-w-3xl mx-auto">
-      <label for="startTime" class="mr-2">Start Time:</label>
-      <input type="datetime-local" id="startTime" class="p-2 border rounded">
-      <label for="weatherInterval" class="ml-4 mr-2">Weather Interval (km):</label>
-      <input type="number" id="weatherInterval" value="5" class="p-2 border rounded">
-      <label for="avgSpeed" class="ml-4 mr-2">Average Speed (km/h):</label>
-      <input type="number" id="avgSpeed" value="20" class="p-2 border rounded">
+    <section class="route-controls">
+      <label for="startTime">Start Time:</label>
+      <input type="datetime-local" id="startTime">
+      <label for="weatherInterval">Weather Interval (km):</label>
+      <input type="number" id="weatherInterval" value="5">
+      <label for="avgSpeed">Average Speed (km/h):</label>
+      <input type="number" id="avgSpeed" value="20">
     </section>
-    
+  
     <!-- GPX Upload -->
-    <section class="upload-section p-6 max-w-3xl mx-auto">
-      <h2 class="text-2xl font-bold mb-4">Upload GPX File</h2>
+    <section class="upload-section">
+      <h2>Upload GPX File</h2>
       <form id="uploadForm">
-        <label for="fileInput" class="mr-2">Select GPX file:</label>
-        <input type="file" id="fileInput" accept=".gpx" class="p-2 border rounded">
-        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-4">Upload</button>
+        <label for="fileInput">Select GPX file:</label>
+        <input type="file" id="fileInput" accept=".gpx">
+        <button type="submit" class="upload-btn">Upload</button>
       </form>
     </section>
-    
-    <!-- Forecast Controls -->
-    <section class="forecast-controls text-center p-6">
-      <button id="saveForecast" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-        Save Forecast
-      </button>
-    </section>
-
-    <!-- Chart Settings (Customizable Dashboard) -->
-    <section class="chart-settings text-center p-6 max-w-3xl mx-auto">
-      <h3 class="text-xl font-bold mb-2">Customize Dashboard</h3>
-      <div>
-        <label><input type="checkbox" class="chart-toggle" data-chart="tempChart" checked> Temperature</label>
-        <label><input type="checkbox" class="chart-toggle" data-chart="precipChart" checked> Precipitation</label>
-        <label><input type="checkbox" class="chart-toggle" data-chart="windChart" checked> Wind</label>
-        <label><input type="checkbox" class="chart-toggle" data-chart="humidityChart" checked> Humidity</label>
-        <label><input type="checkbox" class="chart-toggle" data-chart="pressureChart" checked> Pressure</label>
-        <label><input type="checkbox" class="chart-toggle" data-chart="elevationChart" checked> Elevation</label>
-      </div>
-    </section>
-  </div>
   
-  <!-- Elevation Stats (Stage 2, Part 1) -->
-  <div id="elevationStats" style="text-align:center; font-weight:bold; margin: 1rem;">
-    <!-- We'll fill this with JS after computing gain/loss -->
+    <!-- Forecast Controls -->
+    <section class="forecast-controls">
+      <button id="saveForecast" class="save-forecast-btn">Save Forecast</button>
+    </section>
   </div>
+
+  <!-- Elevation Stats (Stage 2, Part 1) -->
+  <div id="elevationStats" class="elevation-stats"></div>
   
   <!-- Map Container -->
-  <section id="map-container" class="relative h-96 max-w-5xl mx-auto my-6 rounded overflow-hidden shadow-lg">
-    <div id="map" class="w-full h-full"></div>
-    <button id="centerMap" class="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-      Center Map
-    </button>
-    <div id="loading" class="absolute top-4 left-4 bg-white text-gray-900 px-4 py-2 rounded hidden">
-      Loading...
-    </div>
+  <section id="map-container" class="map-container">
+    <div id="map"></div>
+    <button id="centerMap" class="center-map-btn">Center Map</button>
+    <div id="loading" class="loading">Loading...</div>
   </section>
   
-  <!-- Charts Section -->
-  <section class="charts grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 max-w-screen-xl mx-auto">
-    <div class="chart-wrapper">
+  <!-- Charts Section in a "chart-grid" layout -->
+  <section class="chart-grid">
+    <div class="chart-card">
+      <h2>Temperature</h2>
       <canvas id="tempChart"></canvas>
     </div>
-    <div class="chart-wrapper">
+    <div class="chart-card">
+      <h2>Precipitation</h2>
       <canvas id="precipChart"></canvas>
     </div>
-    <div class="chart-wrapper">
+    <div class="chart-card">
+      <h2>Wind</h2>
       <canvas id="windChart"></canvas>
     </div>
-    <div class="chart-wrapper">
+    <div class="chart-card">
+      <h2>Humidity</h2>
       <canvas id="humidityChart"></canvas>
     </div>
-    <div class="chart-wrapper">
+    <div class="chart-card">
+      <h2>Pressure</h2>
       <canvas id="pressureChart"></canvas>
     </div>
-    <div class="chart-wrapper">
+    <div class="chart-card">
+      <h2>Elevation</h2>
       <canvas id="elevationChart"></canvas>
     </div>
   </section>
   
   <!-- Timeline -->
-  <section id="timeline" class="p-6 bg-gray-100 rounded mx-auto max-w-screen-xl overflow-x-auto whitespace-nowrap">
-  </section>
+  <section id="timeline" class="timeline"></section>
   
   <!-- Alerts -->
-  <section id="alerts" class="fixed top-4 right-4 z-50"></section>
+  <section id="alerts" class="alerts"></section>
   
   <!-- Set default start time -->
   <script>
@@ -121,6 +106,13 @@
     const hh = String(tomorrow.getHours()).padStart(2, '0');
     const min = String(tomorrow.getMinutes()).padStart(2, '0');
     startTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+
+    // Show current time in header (like Epic Ride Weather does)
+    const currentTimeElem = document.getElementById('currentTime');
+    if (currentTimeElem) {
+      const nowString = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      currentTimeElem.textContent = nowString;
+    }
   </script>
   
   <!-- External Libraries -->

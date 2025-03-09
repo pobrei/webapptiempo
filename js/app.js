@@ -96,7 +96,16 @@
   // Initialize Map
   ///////////////////////////////////////////////
   const map = L.map('map').setView([41.3851, 2.1734], 13);
+
+  // Default tile layer (light). If you want a dark tile, uncomment below:
+  /*
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+  }).addTo(map);
+  */
+  // Or keep default OSM:
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
   setTimeout(() => map.invalidateSize(), 100);
 
   document.getElementById('centerMap').addEventListener('click', () => {
@@ -108,18 +117,14 @@
   });
 
   ///////////////////////////////////////////////
-  // Chart Options (Detailed Tooltips)
+  // Dark Chart Options (Epic Ride Weather style)
   ///////////////////////////////////////////////
   const commonChartOptions = {
     responsive: true,
-    maintainAspectRatio: false,
+    maintainAspectRatio: true,
+    aspectRatio: 2,
     layout: {
-      padding: {
-        top: 20,
-        bottom: 20,
-        left: 20,
-        right: 20,
-      },
+      padding: 20
     },
     animation: {
       duration: 1200,
@@ -129,11 +134,8 @@
       legend: {
         position: 'top',
         labels: {
-          font: {
-            size: 16,
-            weight: 'bold'
-          },
-          color: '#333'
+          color: '#fff',
+          font: { size: 14, weight: 'bold' }
         }
       },
       tooltip: {
@@ -142,95 +144,49 @@
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleFont: { size: 16 },
         bodyFont: { size: 14 },
-        cornerRadius: 4,
-        // This callback references weatherTasks[index] for separate charts,
-        // but we'll override it for the Elevation chart.
-        callbacks: {
-          label: (context) => {
-            const index = context.dataIndex;
-            const task = weatherTasks[index];
-            if (!task || !task.weather) return "No Data";
-
-            const temp = task.weather.temp ? `${Math.round(task.weather.temp)}°C` : "N/A";
-            const wind = task.weather.windSpeed ? `${Math.round(task.weather.windSpeed)} m/s` : "N/A";
-            const rain = task.weather.rain ? `${task.weather.rain.toFixed(1)} mm` : "0.0 mm";
-            const pressure = task.weather.pressure ? `${task.weather.pressure} hPa` : "N/A";
-
-            return [
-              `🌡️ Temp: ${temp}`,
-              `💨 Wind: ${wind}`,
-              `🌧️ Rain: ${rain}`,
-              `🔵 Pressure: ${pressure}`
-            ];
-          }
-        }
+        cornerRadius: 4
       }
     },
     scales: {
       x: {
         ticks: {
-          font: { size: 14 },
-          color: '#333',
-          maxTicksLimit: 8
+          color: '#aaa',
+          font: { size: 12 }
         },
         grid: {
-          color: 'rgba(0, 0, 0, 0.1)'
+          color: 'rgba(255,255,255,0.1)'
         },
         title: {
           display: true,
           text: 'Distance (km)',
-          font: { size: 16 },
-          color: '#333'
+          color: '#fff',
+          font: { size: 14 }
         }
       },
       y: {
         ticks: {
-          font: { size: 14 },
-          color: '#333'
+          color: '#aaa',
+          font: { size: 12 }
         },
         grid: {
-          color: 'rgba(0, 0, 0, 0.1)'
+          color: 'rgba(255,255,255,0.1)'
         },
         title: {
           display: true,
           text: 'Value',
-          font: { size: 16 },
-          color: '#333'
+          color: '#fff',
+          font: { size: 14 }
         }
       }
     },
     elements: {
       line: {
         borderWidth: 3,
-        tension: 0.3,
-        borderCapStyle: 'round',
-        borderJoinStyle: 'round'
+        tension: 0.3
       },
       point: {
-        radius: 5,
-        hoverRadius: 7
-      }
-    },
-    hover: {
-      mode: 'nearest',
-      intersect: true,
-      onHover: (event, chartElements) => {
-        if (chartElements.length) {
-          const index = chartElements[0].index;
-          highlightTimelineEntry(index);
-          panMapToPoint(index);
-        } else {
-          removeTimelineHighlights();
-        }
-      }
-    },
-    onClick: (e, activeElements) => {
-      if (activeElements.length) {
-        const index = activeElements[0].index;
-        if (weatherTasks[index]?.position) {
-          map.setView(weatherTasks[index].position, 13, { animate: true });
-          if (weatherTasks[index].marker) weatherTasks[index].marker.openPopup();
-        }
+        radius: 3,
+        hoverRadius: 6
       }
     }
   };
@@ -306,8 +262,8 @@
       // On click, center map & open popup
       entry.addEventListener('click', () => {
         if (weatherTasks[index]?.position) {
-          map.setView(task.position, 13, { animate: true });
-          if (task.marker) task.marker.openPopup();
+          map.setView(weatherTasks[index].position, 13, { animate: true });
+          if (weatherTasks[index].marker) weatherTasks[index].marker.openPopup();
         }
       });
 
@@ -620,196 +576,26 @@
   ///////////////////////////////////////////////
   // Charts Rendering
   ///////////////////////////////////////////////
-  /**
-   * Helper to do ratio-based interpolation for both temp and feels_like
-   * if you need it in multiple charts. For the main temperature chart,
-   * we still rely on weatherTasks. For the elevation chart, we do
-   * custom logic below. 
-   * If needed, you can unify these approaches.
-   */
 
-  function renderElevationChart() {
-    if (!elevationProfile.length || !weatherTasks.length) return;
-
-    const ctx = document.getElementById('elevationChart').getContext('2d');
-
-    // We assume you already built "temperatureDataset" and "feelsLikeDataset"
-    // by interpolating or by directly referencing arrays. 
-    // From previous code, you might do something like:
-    // 
-    // 1) Create a function to get interpolated weather for each elevation point
-    // 2) Fill arrays. But let's assume you've done it if you followed the previous code.
-    // 
-    // We'll show a direct approach for clarity:
-    const temperatureDataset = [];
-    const feelsLikeDataset = [];
-
-    // We'll do a quick approach: If you want to fully handle out-of-bounds,
-    // you can do ratio-based interpolation. Or if you just want to match
-    // indexes, you can do a simpler approach. 
-    // This snippet assumes you have an "interpolateWeather" approach from earlier.
-    // Otherwise, we can set them to null if out-of-range.
-
-    for (let i = 0; i < elevationProfile.length; i++) {
-      const distMeters = parseFloat(elevationProfile[i].distance) * 1000;
-      // find nearest weatherTask
-      const w = getInterpolatedWeather(distMeters);
-      if (w) {
-        temperatureDataset.push(w.temp);
-        feelsLikeDataset.push(w.feels_like);
-      } else {
-        temperatureDataset.push(null);
-        feelsLikeDataset.push(null);
-      }
-    }
-
-    elevationChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: elevationProfile.map(pt => `${pt.distance} km`),
-        datasets: [
-          {
-            label: "Elevation (m)",
-            data: elevationProfile.map(pt => pt.elevation),
-            borderColor: "#e67e22",
-            tension: 0.3,
-            fill: false,
-            yAxisID: 'y'
-          },
-          {
-            label: "Temperature (°C)",
-            data: temperatureDataset,
-            borderColor: "#ff6384",
-            tension: 0.3,
-            fill: false,
-            yAxisID: 'y1'
-          },
-          {
-            label: "Feels Like (°C)",
-            data: feelsLikeDataset,
-            borderColor: "#ffa500",
-            tension: 0.3,
-            fill: false,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        ...commonChartOptions,
-        // Override the default tooltip callback for this chart only:
-        plugins: {
-          ...commonChartOptions.plugins,
-          tooltip: {
-            ...commonChartOptions.plugins.tooltip,
-            callbacks: {
-              label: (context) => {
-                // For this chart, we want the actual data from the dataset
-                const dsLabel = context.dataset.label || '';
-                const val = context.parsed.y !== null ? context.parsed.y.toFixed(1) : 'No Data';
-                return `${dsLabel}: ${val}`;
-              }
-            }
-          }
-        },
-        scales: {
-          ...commonChartOptions.scales,
-          x: {
-            ...commonChartOptions.scales.x,
-            title: {
-              ...commonChartOptions.scales.x.title,
-              text: 'Distance (km)'
-            }
-          },
-          y: {
-            type: 'linear',
-            position: 'left',
-            ...commonChartOptions.scales.y,
-            title: {
-              ...commonChartOptions.scales.y.title,
-              text: 'Elevation (m)'
-            }
-          },
-          y1: {
-            type: 'linear',
-            position: 'right',
-            grid: { drawOnChartArea: false },
-            ticks: {
-              font: { size: 14 },
-              color: '#333'
-            },
-            title: {
-              display: true,
-              text: 'Temperature (°C)',
-              font: { size: 16 },
-              color: '#333'
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Example "getInterpolatedWeather" for the elevation chart
-   * If distance is outside the range of weatherTasks, use the first or last.
-   */
-  function getInterpolatedWeather(distMeters) {
-    if (!weatherTasks.length) return null;
-    const lastIndex = weatherTasks.length - 1;
-
-    // If dist is beyond the last
-    if (distMeters >= weatherTasks[lastIndex].distance) {
-      return weatherTasks[lastIndex].weather
-        ? { temp: weatherTasks[lastIndex].weather.temp, feels_like: weatherTasks[lastIndex].weather.feels_like }
-        : null;
-    }
-
-    // If dist is before the first
-    if (distMeters <= weatherTasks[0].distance) {
-      return weatherTasks[0].weather
-        ? { temp: weatherTasks[0].weather.temp, feels_like: weatherTasks[0].weather.feels_like }
-        : null;
-    }
-
-    // Otherwise, find tasks i, i+1
-    let i = 0;
-    for (; i < weatherTasks.length - 1; i++) {
-      if (weatherTasks[i].distance <= distMeters && weatherTasks[i + 1].distance >= distMeters) {
-        break;
-      }
-    }
-    const w1 = weatherTasks[i].weather;
-    const w2 = weatherTasks[i + 1].weather;
-    if (!w1 || !w2) return null;
-
-    const d1 = weatherTasks[i].distance;
-    const d2 = weatherTasks[i + 1].distance;
-    const ratio = (distMeters - d1) / (d2 - d1);
-    const temp = w1.temp + (w2.temp - w1.temp) * ratio;
-    const feels_like = w1.feels_like + (w2.feels_like - w1.feels_like) * ratio;
-
-    return { temp, feels_like };
-  }
-
+  // 1) Temperature Chart (Temp + Feels Like), no repeated lines
   function renderTemperatureChart() {
     if (!weatherTasks.length) return;
-  
+
     const ctx = document.getElementById('tempChart').getContext('2d');
-  
-    // Create gradients if you like a filled area under each line
+
+    // Gradients for a fill effect
     const tempGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    tempGradient.addColorStop(0, 'rgba(255, 99, 132, 0.5)'); // pinkish
-    tempGradient.addColorStop(1, 'rgba(255, 99, 132, 0)');
-  
+    tempGradient.addColorStop(0, 'rgba(255,140,0,0.5)'); 
+    tempGradient.addColorStop(1, 'rgba(255,140,0,0)');
+
     const feelsGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    feelsGradient.addColorStop(0, 'rgba(255,165,0,0.5)'); // orange
-    feelsGradient.addColorStop(1, 'rgba(255,165,0,0)');
-  
-    // Build data arrays for Temperature and Feels Like
+    feelsGradient.addColorStop(0, 'rgba(255,99,132,0.5)');
+    feelsGradient.addColorStop(1, 'rgba(255,99,132,0)');
+
     const distanceLabels = weatherTasks.map(t => `${(t.distance / 1000).toFixed(1)} km`);
     const tempData = weatherTasks.map(t => t.weather?.temp ?? null);
-    const feelsLikeData = weatherTasks.map(t => t.weather?.feels_like ?? null);
-  
+    const feelsData = weatherTasks.map(t => t.weather?.feels_like ?? null);
+
     tempChart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -819,33 +605,29 @@
             label: "Temperature (°C)",
             data: tempData,
             backgroundColor: tempGradient,
-            borderColor: '#ff6384',
+            borderColor: '#ff8c00',
             fill: true,
             tension: 0.3
           },
           {
             label: "Feels Like (°C)",
-            data: feelsLikeData,
+            data: feelsData,
             backgroundColor: feelsGradient,
-            borderColor: '#ffa500',
+            borderColor: '#ff6384',
             fill: true,
             tension: 0.3
           }
         ]
       },
       options: {
-        // Reuse your existing `commonChartOptions` but override the tooltip callback
         ...commonChartOptions,
         plugins: {
           ...commonChartOptions.plugins,
           tooltip: {
             ...commonChartOptions.plugins.tooltip,
             callbacks: {
-              // This callback ensures we ONLY show each dataset's numeric value,
-              // no wind/rain/pressure lines from `weatherTasks`.
               label: (context) => {
                 const dsLabel = context.dataset.label || '';
-                // The numeric value from the dataset at this index
                 const val = context.parsed.y;
                 if (val === null) return `${dsLabel}: No Data`;
                 return `${dsLabel}: ${val.toFixed(1)}`;
@@ -867,6 +649,7 @@
     });
   }
 
+  // 2) Precipitation Chart
   function renderPrecipitationChart() {
     const ctx = document.getElementById('precipChart').getContext('2d');
     precipChart = new Chart(ctx, {
@@ -883,18 +666,11 @@
         ...commonChartOptions,
         scales: {
           ...commonChartOptions.scales,
-          x: {
-            ...commonChartOptions.scales.x,
-            title: {
-              ...commonChartOptions.scales.x.title,
-              text: 'Time'
-            }
-          },
           y: {
             ...commonChartOptions.scales.y,
             title: {
               ...commonChartOptions.scales.y.title,
-              text: 'Precipitation (mm)'
+              text: 'Rain (mm)'
             }
           }
         }
@@ -902,6 +678,7 @@
     });
   }
 
+  // 3) Wind Chart
   function renderWindChart() {
     const ctx = document.getElementById('windChart').getContext('2d');
     windChart = new Chart(ctx, {
@@ -909,12 +686,12 @@
       data: {
         labels: weatherTasks.map(t => t.forecastTime.toLocaleTimeString()),
         datasets: [{
-          label: "Wind Speed (m/s)",
+          label: "Wind (m/s)",
           data: weatherTasks.map(t => t.weather?.windSpeed ?? null),
-          borderColor: "#FF6600",
-          tension: 0.3,
+          borderColor: "#36a2eb",
           fill: false,
-          // Use our enhanced custom SVG marker for each point
+          tension: 0.3,
+          // Custom SVG marker
           pointStyle: weatherTasks.map(t => {
             const adjustedWindDeg = ((t.weather.windDeg ?? 0) + 180) % 360;
             const icon = createSvgIcon(adjustedWindDeg);
@@ -926,26 +703,19 @@
         ...commonChartOptions,
         scales: {
           ...commonChartOptions.scales,
-          x: {
-            ...commonChartOptions.scales.x,
-            title: {
-              ...commonChartOptions.scales.x.title,
-              text: 'Time'
-            }
-          },
           y: {
             ...commonChartOptions.scales.y,
             title: {
               ...commonChartOptions.scales.y.title,
-              text: 'Wind Speed (m/s)'
-            },
-            beginAtZero: true
+              text: 'Wind (m/s)'
+            }
           }
         }
       }
     });
   }
 
+  // 4) Humidity Chart
   function renderHumidityChart() {
     const ctx = document.getElementById('humidityChart').getContext('2d');
     humidityChart = new Chart(ctx, {
@@ -956,35 +726,29 @@
           label: "Humidity (%)",
           data: weatherTasks.map(t => t.weather?.humidity ?? null),
           borderColor: "#4CAF50",
-          tension: 0.3,
-          fill: false
+          fill: false,
+          tension: 0.3
         }]
       },
       options: {
         ...commonChartOptions,
         scales: {
           ...commonChartOptions.scales,
-          x: {
-            ...commonChartOptions.scales.x,
-            title: {
-              ...commonChartOptions.scales.x.title,
-              text: 'Time'
-            }
-          },
           y: {
             ...commonChartOptions.scales.y,
+            beginAtZero: true,
+            max: 100,
             title: {
               ...commonChartOptions.scales.y.title,
               text: 'Humidity (%)'
-            },
-            beginAtZero: true,
-            max: 100
+            }
           }
         }
       }
     });
   }
 
+  // 5) Pressure Chart
   function renderPressureChart() {
     const ctx = document.getElementById('pressureChart').getContext('2d');
     pressureChart = new Chart(ctx, {
@@ -995,26 +759,51 @@
           label: "Pressure (hPa)",
           data: weatherTasks.map(t => t.weather?.pressure ?? null),
           borderColor: "#8e44ad",
-          tension: 0.3,
-          fill: false
+          fill: false,
+          tension: 0.3
         }]
       },
       options: {
         ...commonChartOptions,
         scales: {
           ...commonChartOptions.scales,
-          x: {
-            ...commonChartOptions.scales.x,
-            title: {
-              ...commonChartOptions.scales.x.title,
-              text: 'Time'
-            }
-          },
           y: {
             ...commonChartOptions.scales.y,
             title: {
               ...commonChartOptions.scales.y.title,
               text: 'Pressure (hPa)'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // 6) Elevation Chart
+  function renderElevationChart() {
+    if (!elevationProfile.length) return;
+    const ctx = document.getElementById('elevationChart').getContext('2d');
+    elevationChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: elevationProfile.map(pt => `${pt.distance} km`),
+        datasets: [{
+          label: "Elevation (m)",
+          data: elevationProfile.map(pt => pt.elevation),
+          borderColor: "#f39c12",
+          fill: false,
+          tension: 0.3
+        }]
+      },
+      options: {
+        ...commonChartOptions,
+        scales: {
+          ...commonChartOptions.scales,
+          y: {
+            ...commonChartOptions.scales.y,
+            title: {
+              ...commonChartOptions.scales.y.title,
+              text: 'Elevation (m)'
             }
           }
         }
@@ -1034,17 +823,16 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "mm", "a4");
     doc.setFontSize(18);
-    doc.text("RideWeather Planner - Forecast Report", 10, 15);
+    doc.text("Epic Ride Weather - Forecast Report", 10, 15);
 
     let y = 25;
 
-    // Capture Route Summary
+    // Route Summary
     const totalDistance = (calculateTotalDistance(currentRouteCoords) / 1000).toFixed(1);
     doc.setFontSize(12);
     doc.text(`Total Distance: ${totalDistance} km`, 10, y);
     y += 6;
     
-    // If we have elevationProfile, compute total gain/loss
     if (elevationProfile && elevationProfile.length > 1) {
       const { totalGain, totalLoss } = calculateElevationGainLoss(elevationProfile);
       doc.text(`Total Elevation Gain: ${totalGain} m`, 10, y);
@@ -1053,10 +841,9 @@
       y += 6;
     }
 
-    doc.text(`Weather Forecast for ${weatherTasks.length} points along the route:`, 10, y);
+    doc.text(`Weather Forecast for ${weatherTasks.length} points:`, 10, y);
     y += 10;
 
-    // Capture Weather + Alerts
     weatherTasks.forEach((task, i) => {
       const time = task.forecastTime.toLocaleTimeString();
       const pos = `(${task.position[0].toFixed(4)}, ${task.position[1].toFixed(4)})`;
@@ -1065,24 +852,22 @@
       const rain = task.weather ? `${task.weather.rain.toFixed(1)} mm` : "0.0 mm";
       const pressure = task.weather ? `${task.weather.pressure} hPa` : "N/A";
 
-      doc.text(`${i + 1}) ${time} | Pos: ${pos} | Temp: ${temp} | Wind: ${wind} | Rain: ${rain} | Pressure: ${pressure}`, 10, y);
+      doc.text(`${i+1}) ${time} | Pos: ${pos} | Temp: ${temp} | Wind: ${wind} | Rain: ${rain} | Pressure: ${pressure}`, 10, y);
       y += 6;
 
-      // If there's an alert for this point
       if (task.alerts && task.alerts.length > 0) {
-        doc.setTextColor(255, 0, 0); // red text
+        doc.setTextColor(255, 0, 0);
         doc.text(`Alerts: ${task.alerts.join(', ')}`, 10, y);
-        doc.setTextColor(0, 0, 0);   // reset text color
+        doc.setTextColor(0, 0, 0);
         y += 6;
       }
-
       if (y > 270) {
         doc.addPage();
         y = 20;
       }
     });
 
-    // Capture Map Snapshot
+    // Map Snapshot
     const mapCanvas = document.querySelector("#map canvas");
     if (mapCanvas) {
       const mapImg = mapCanvas.toDataURL("image/png");
@@ -1092,7 +877,7 @@
       doc.addImage(mapImg, "PNG", 10, 30, 180, 100);
     }
 
-    // Capture Weather Charts
+    // Weather Charts
     const chartIds = ["tempChart", "precipChart", "windChart", "humidityChart", "pressureChart", "elevationChart"];
     for (const id of chartIds) {
       const chartCanvas = document.getElementById(id);
@@ -1107,7 +892,6 @@
 
     doc.save("forecast.pdf");
   };
-
   document.getElementById('saveForecast').addEventListener('click', saveForecast);
 
   ///////////////////////////////////////////////
@@ -1137,16 +921,14 @@
       renderHumidityChart();
       renderPressureChart();
 
-      // If the GPX had elevation data, build the combined elevation/temperature chart
+      // If GPX had elevation data
       if (currentRoutePoints && currentRoutePoints[0].ele !== undefined) {
         elevationProfile = computeElevationProfile(currentRoutePoints);
-
         const { totalGain, totalLoss } = calculateElevationGainLoss(elevationProfile);
         const statsDiv = document.getElementById('elevationStats');
         if (statsDiv) {
           statsDiv.textContent = `Total Elevation Gain: ${totalGain} m | Total Elevation Loss: ${totalLoss} m`;
         }
-
         renderElevationChart();
       }
     } catch (error) {
@@ -1195,16 +977,14 @@
       renderHumidityChart();
       renderPressureChart();
 
-      // If the GPX had elevation data, build the combined elevation/temperature chart
+      // Elevation chart if we have elevation data
       if (routePoints[0].ele !== undefined) {
         elevationProfile = computeElevationProfile(routePoints);
-
         const { totalGain, totalLoss } = calculateElevationGainLoss(elevationProfile);
         const statsDiv = document.getElementById('elevationStats');
         if (statsDiv) {
           statsDiv.textContent = `Total Elevation Gain: ${totalGain} m | Total Elevation Loss: ${totalLoss} m`;
         }
-
         renderElevationChart();
       }
     } catch (error) {
@@ -1257,25 +1037,20 @@
   ///////////////////////////////////////////////
   // Stage 3, Step 3: Customizable Dashboard (Toggling Charts)
   ///////////////////////////////////////////////
-  // 1) Listen for changes on each chart-toggle checkbox
   document.querySelectorAll('.chart-toggle').forEach(checkbox => {
     checkbox.addEventListener('change', (e) => {
       const chartId = e.target.dataset.chart;
       toggleChartVisibility(chartId, e.target.checked);
-
-      // Optional: Save preference in localStorage
       localStorage.setItem(`chartToggle_${chartId}`, e.target.checked);
     });
   });
 
-  // 2) This function shows/hides the corresponding chart wrapper
   function toggleChartVisibility(chartId, isVisible) {
-    const wrapper = document.getElementById(chartId)?.closest('.chart-wrapper');
+    const wrapper = document.getElementById(chartId)?.closest('.chart-card');
     if (!wrapper) return;
     wrapper.style.display = isVisible ? 'block' : 'none';
   }
 
-  // 3) On page load, restore user preferences from localStorage
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.chart-toggle').forEach(checkbox => {
       const storedValue = localStorage.getItem(`chartToggle_${checkbox.dataset.chart}`);
