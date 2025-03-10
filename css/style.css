@@ -54,7 +54,7 @@ body {
   transform: scale(1.02);
 }
 .toggle-controls-btn::after {
-  content: '▼'; /* default downward arrow */
+  content: '  ▼'; /* default downward arrow */
   position: absolute;
   right: 1rem;
   transition: transform 0.3s ease;
@@ -232,7 +232,7 @@ input[type="file"]:focus {
 .chart-card canvas {
   width: 100% !important;
   height: auto !important;
-  min-height: 200px;
+  min-height: 300px;
 }
 @media (min-width: 1400px) {
   .chart-card canvas {
