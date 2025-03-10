@@ -56,24 +56,45 @@
   ///////////////////////////////////////////////
   // UI Helper Functions
   ///////////////////////////////////////////////
-  const showLoading = () => document.getElementById('loading').classList.add('active');
-  const hideLoading = () => document.getElementById('loading').classList.remove('active');
-  
+  const showLoading = () => {
+    const loadingElem = document.getElementById('loading');
+    loadingElem.classList.add('active');
+    gsap.fromTo(loadingElem, { opacity: 0 }, { opacity: 1, duration: 0.5 });
+  };
+  const hideLoading = () => {
+    const loadingElem = document.getElementById('loading');
+    gsap.to(loadingElem, { opacity: 0, duration: 0.5, onComplete: () => loadingElem.classList.remove('active') });
+  };
+
   const showError = (message, type = 'error') => {
     console.error(message);
     const alerts = document.getElementById('alerts');
     const alertItem = document.createElement('div');
+    let icon = '';
+    if (type === 'warning') {
+      icon = '⚠️ ';
+    } else if (type === 'error') {
+      icon = '❗ ';
+    }
     alertItem.className = `alert-item ${type}`;
-    alertItem.innerHTML = `<span>${message}</span>`;
+    alertItem.innerHTML = `<span>${icon}${message}</span>`;
     alerts.appendChild(alertItem);
-    // Trigger fade-in effect
-    requestAnimationFrame(() => {
-      alertItem.classList.add('show');
-    });
+    gsap.fromTo(alertItem, { opacity: 0 }, { opacity: 1, duration: 0.5 });
     setTimeout(() => {
-      // Fade-out then remove
-      alertItem.classList.remove('show');
-      setTimeout(() => alertItem.remove(), 500);
+      gsap.to(alertItem, { opacity: 0, duration: 0.5, onComplete: () => alertItem.remove() });
+    }, 5000);
+  };
+
+  const showSuccess = (message) => {
+    console.log(message);
+    const alerts = document.getElementById('alerts');
+    const alertItem = document.createElement('div');
+    alertItem.className = `alert-item success`;
+    alertItem.innerHTML = `<span>✅ ${message}</span>`;
+    alerts.appendChild(alertItem);
+    gsap.fromTo(alertItem, { opacity: 0 }, { opacity: 1, duration: 0.5 });
+    setTimeout(() => {
+      gsap.to(alertItem, { opacity: 0, duration: 0.5, onComplete: () => alertItem.remove() });
     }, 5000);
   };
 
@@ -107,8 +128,8 @@
   const map = L.map('map').setView([41.3851, 2.1734], 13);
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles © Esri &mdash; Esri, DeLorme, NAVTEQ',
-  }).addTo(map);  
-  
+  }).addTo(map);
+
   document.getElementById('centerMap').addEventListener('click', () => {
     if (routeLayer) {
       map.fitBounds(routeLayer.getBounds());
@@ -396,15 +417,24 @@
   }
 
   ///////////////////////////////////////////////
-  // Render Route on Map
+  // Render Route on Map with Animated Drawing
   ///////////////////////////////////////////////
   function renderRoute(coords) {
     if (routeLayer) {
       map.removeLayer(routeLayer);
       routeLayer = null;
     }
-    routeLayer = L.polyline(coords, { color: "#2196F3" }).addTo(map);
+    routeLayer = L.polyline(coords, { color: "#2196F3", weight: 4 }).addTo(map);
     map.fitBounds(routeLayer.getBounds());
+    
+    // Animate the route line drawing using GSAP
+    if (routeLayer && routeLayer._path) {
+      const path = routeLayer._path;
+      const totalLength = path.getTotalLength();
+      path.style.strokeDasharray = totalLength;
+      path.style.strokeDashoffset = totalLength;
+      gsap.to(path, { strokeDashoffset: 0, duration: 1.5, ease: "power1.inOut" });
+    }
   }
 
   ///////////////////////////////////////////////
@@ -895,6 +925,25 @@
   };
 
   ///////////////////////////////////////////////
+  // Collapsible Controls with GSAP Animation
+  ///////////////////////////////////////////////
+  const toggleControlsBtn = document.getElementById('toggleControls');
+  if (toggleControlsBtn) {
+    toggleControlsBtn.addEventListener('click', () => {
+      const controlsContainer = document.getElementById('controlsContainer');
+      if (controlsContainer) {
+        if (controlsContainer.classList.contains('collapsed')) {
+          controlsContainer.classList.remove('collapsed');
+          gsap.to(controlsContainer, { height: "auto", opacity: 1, duration: 0.5 });
+        } else {
+          gsap.to(controlsContainer, { height: 0, opacity: 0, duration: 0.5, onComplete: () => controlsContainer.classList.add('collapsed') });
+        }
+      }
+      toggleControlsBtn.classList.toggle('open');
+    });
+  }
+
+  ///////////////////////////////////////////////
   // File Upload Handling
   ///////////////////////////////////////////////
   document.getElementById('uploadForm').addEventListener('submit', async (e) => {
@@ -936,6 +985,7 @@
         }
         renderElevationChart();
       }
+      showSuccess("GPX file uploaded and processed successfully!");
     } catch (error) {
       showError(error.message);
     } finally {
@@ -1001,18 +1051,4 @@
       }
     });
   });
-
-  ///////////////////////////////////////////////
-  // Collapsible Controls (Smooth Slide & Icon Rotation)
-  ///////////////////////////////////////////////
-  const toggleControlsBtn = document.getElementById('toggleControls');
-  if (toggleControlsBtn) {
-    toggleControlsBtn.addEventListener('click', () => {
-      const controlsContainer = document.getElementById('controlsContainer');
-      if (controlsContainer) {
-        controlsContainer.classList.toggle('collapsed');
-      }
-      toggleControlsBtn.classList.toggle('open');
-    });
-  }
 })();

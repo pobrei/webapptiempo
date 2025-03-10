@@ -14,27 +14,29 @@ body {
   background: #1c1c1e;  /* or #121212 for even darker */
   color: #ffffff;
   font-family: "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.6;
+  line-height: 1.8; /* Increased line height for better readability */
 }
 
 /* Top bar / header */
 .top-bar {
-  background: #2c2c2e;
+  background: linear-gradient(135deg, #2c2c2e, #1c1c1e);
   padding: 1rem;
   text-align: center;
   border-bottom: 1px solid #3a3a3c;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 .app-title {
   margin: 0;
-  font-size: 2rem;
-  color: #ffa500; /* accent color */
-  margin-bottom: 0.5rem; /* added spacing for readability */
+  font-size: 2.2rem;
+  font-weight: 700; /* Bolder title */
+  color: #ffa500; /* Primary accent color */
+  margin-bottom: 0.5rem;
 }
 .app-subtitle {
   margin: 0;
   font-size: 1rem;
   color: #aaaaaa;
-  opacity: 0.8; /* reduced brightness for hierarchy */
+  opacity: 0.8;
 }
 
 /* Toggle button for collapsible controls */
@@ -54,12 +56,11 @@ body {
   transform: scale(1.02);
 }
 .toggle-controls-btn::after {
-  content: '  ▼'; /* default downward arrow */
+  content: '  ▼';
   position: absolute;
   right: 1rem;
   transition: transform 0.3s ease;
 }
-/* Rotate arrow when controls are open */
 .toggle-controls-btn.open::after {
   transform: rotate(180deg);
 }
@@ -85,7 +86,7 @@ body {
 .route-controls,
 .upload-section,
 .forecast-controls {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem; /* Increased vertical spacing */
 }
 .route-controls label,
 .upload-section label {
@@ -122,6 +123,8 @@ input[type="file"]:focus {
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  display: inline-flex;
+  align-items: center;
 }
 .upload-btn:hover,
 .save-forecast-btn:hover {
@@ -135,7 +138,7 @@ input[type="file"]:focus {
   text-align: center;
   font-weight: bold;
   margin: 1rem auto;
-  color: #ffa500; /* highlight color */
+  color: #ffa500;
   padding: 0.5rem;
   font-size: 1.2rem;
   text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
@@ -179,7 +182,7 @@ input[type="file"]:focus {
   margin-right: 0.5rem;
 }
 
-/* Loading overlay with fade-in/out */
+/* Enhanced Loading Overlay with Spinner Animation */
 #loading {
   position: absolute;
   top: 20px;
@@ -188,15 +191,29 @@ input[type="file"]:focus {
   color: #fff;
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  display: none;
-  font-size: 1rem;
-  z-index: 1001;
+  display: flex;
+  align-items: center;
   opacity: 0;
   transition: opacity 0.5s ease;
+  z-index: 1001;
 }
 #loading.active {
-  display: block;
+  display: flex;
   opacity: 1;
+}
+#loading::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.5rem;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #ffa500;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Chart Grid */
@@ -228,7 +245,6 @@ input[type="file"]:focus {
   text-transform: uppercase;
   font-weight: bold;
 }
-/* Ensure charts remain legible */
 .chart-card canvas {
   width: 100% !important;
   height: auto !important;
