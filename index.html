@@ -124,6 +124,11 @@
       const nowString = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
       currentTimeElem.textContent = nowString;
     }
+
+    // New functionality: Reload the page when the title is clicked.
+    document.querySelector('.app-title').addEventListener('click', () => {
+      location.reload();
+    });
   </script>
   
   <!-- External Libraries -->

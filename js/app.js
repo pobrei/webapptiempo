@@ -427,14 +427,7 @@
     routeLayer = L.polyline(coords, { color: "#2196F3", weight: 4 }).addTo(map);
     map.fitBounds(routeLayer.getBounds());
     
-    // Animate the route line drawing using GSAP
-    if (routeLayer && routeLayer._path) {
-      const path = routeLayer._path;
-      const totalLength = path.getTotalLength();
-      path.style.strokeDasharray = totalLength;
-      path.style.strokeDashoffset = totalLength;
-      gsap.to(path, { strokeDashoffset: 0, duration: 1.5, ease: "power1.inOut" });
-    }
+
   }
 
   ///////////////////////////////////////////////
