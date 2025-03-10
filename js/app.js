@@ -123,7 +123,6 @@
   const commonChartOptions = {
     responsive: true,
     maintainAspectRatio: true,
-    aspectRatio: 2,
     minHeight: 300,
     layout: {
       padding: 20
