@@ -105,10 +105,10 @@
   // Initialize Map
   ///////////////////////////////////////////////
   const map = L.map('map').setView([41.3851, 2.1734], 13);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap, © CartoDB'
-  }).addTo(map);
-
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles © Esri &mdash; Esri, DeLorme, NAVTEQ',
+  }).addTo(map);  
+  
   document.getElementById('centerMap').addEventListener('click', () => {
     if (routeLayer) {
       map.fitBounds(routeLayer.getBounds());
@@ -118,7 +118,7 @@
   });
 
   ///////////////////////////////////////////////
-  // Dark Chart Options (Epic Ride Weather style)
+  // Dark Chart Options
   ///////////////////////////////////////////////
   const commonChartOptions = {
     responsive: true,
@@ -799,7 +799,7 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "mm", "a4");
     doc.setFontSize(18);
-    doc.text("Epic Ride Weather - Forecast Report", 10, 15);
+    doc.text("Forecast Report", 10, 15);
     let y = 25;
     const totalDistance = (calculateTotalDistance(currentRouteCoords) / 1000).toFixed(1);
     doc.setFontSize(12);
