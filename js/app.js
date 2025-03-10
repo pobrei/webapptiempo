@@ -105,8 +105,9 @@
   // Initialize Map
   ///////////////////////////////////////////////
   const map = L.map('map').setView([41.3851, 2.1734], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-  setTimeout(() => map.invalidateSize(), 100);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB'
+  }).addTo(map);
 
   document.getElementById('centerMap').addEventListener('click', () => {
     if (routeLayer) {
@@ -123,6 +124,7 @@
     responsive: true,
     maintainAspectRatio: true,
     aspectRatio: 2,
+    minHeight: 300,
     layout: {
       padding: 20
     },
